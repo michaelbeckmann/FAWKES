@@ -130,11 +130,11 @@ waterbase_maxyear<-read.csv("Waterbase_maxyear_fullycombined.csv", header=TRUE )
 waterbase_maxyear<-waterbase_maxyear[complete.cases(waterbase_maxyear[,21:22]),]
 
 # read lines (CCM2 river data), its a shapefile. Has been combined using ArcGIS from all sub-datasets available for Europe
-CCM2_riversegments<-readOGR(".","Riversegments_All")
+CCM2_riversegments<-readOGR("CCM2/","Riversegments_All")
 
 # list of point dataframes as character. contains all point datasets we would like to analyse as ES proxies + the station data (i.e. water quality)
 points_df_list<-c("watermills","marina","fishing","water_works","slipway", "waterbase_maxyear")
-#points_df_list<-c("waterbase_maxyear")
+#points_df_list<-c("marina","fishing","water_works","slipway","waterbase_maxyear")
 
 # lines (rivers)
 lines_df<-CCM2_riversegments
