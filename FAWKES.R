@@ -1,4 +1,4 @@
-setwd("~/Downloads/Waterbase_Thomas")
+setwd("~/Dropbox/FAWKES/Reading Material/data")
 #library("xlsx") # actually, this seems to be rubbish. extremely slow. its better to create csv files from xlsx in libreoffice
 library(plyr)
 require(sp)
@@ -8,31 +8,32 @@ require(spatstat)
 require (raster)
 require(rgeos)
 
-### load all files and prepare data (step 1), the whole section may be skipped and the fullycombined.csv can be loaded directly
+### load all files and prepare data (step 1), 
+
+# OSM data extracted through overpass-turbo and converted into csv
+slipway<-read.csv("OSM_data/slipway.csv", header=TRUE, sep=";" )
+marina<-(read.csv("OSM_data/marina.csv", header=TRUE, sep=";" ))
+watermills<-(read.csv("OSM_data/watermills.csv", header=TRUE, sep=";" ))
+fishing<-read.csv("OSM_data/fishing.csv", header=TRUE, sep=";" )
+water_works<-read.csv("OSM_data/water_works.csv", header=TRUE, sep=";" )
+
+# the following section may be skipped and the fullycombined.csv can be loaded directly
 {
 # load Waterbase extracted tables (coming from ms access) for water quality.
 # files still contain alle measurement timesteps
-EQR_Phytobenthos_G<-read.csv("EQR_Phytobenthos_G.csv", header=TRUE, sep=";" )
-EQR_Invertebrate<-read.csv("EQR_Invertebrate.csv", header=TRUE, sep=";" )
-EQR_Phytobenthos_E<-read.csv("EQR_Phytobenthos_E.csv", header=TRUE, sep=";" )
-Nutrients_Nitrate<-read.csv("Nutrients_Nitrate.csv", header=TRUE, sep=";" )
-Nutrients_Nitrite<-read.csv("Nutrients_Nitrite.csv", header=TRUE, sep=";" )
-Nutrients_PH<-read.csv("Nutrients_PH.csv", header=TRUE, sep=";" )
-Nutrients_Temperature<-read.csv("Nutrients_Temperature.csv", header=TRUE, sep=";" )
-Nutrients_TOC<-read.csv("Nutrients_TOC.csv", header=TRUE, sep=";" )
-Nutrients_Total_Nitrogen<-read.csv("Nutrients_Total_Nitrogen.csv", header=TRUE, sep=";" )
-Nutrients_Total_Phosphorous<-read.csv("Nutrients_Total_Phosphorous.csv", header=TRUE, sep=";" )
+EQR_Phytobenthos_G<-read.csv("Waterbase/EQR_Phytobenthos_G.csv", header=TRUE, sep=";" )
+EQR_Invertebrate<-read.csv("Waterbase/EQR_Invertebrate.csv", header=TRUE, sep=";" )
+EQR_Phytobenthos_E<-read.csv("Waterbase/EQR_Phytobenthos_E.csv", header=TRUE, sep=";" )
+Nutrients_Nitrate<-read.csv("Waterbase/Nutrients_Nitrate.csv", header=TRUE, sep=";" )
+Nutrients_Nitrite<-read.csv("Waterbase/Nutrients_Nitrite.csv", header=TRUE, sep=";" )
+Nutrients_PH<-read.csv("Waterbase/Nutrients_PH.csv", header=TRUE, sep=";" )
+Nutrients_Temperature<-read.csv("Waterbase/Nutrients_Temperature.csv", header=TRUE, sep=";" )
+Nutrients_TOC<-read.csv("Waterbase/Nutrients_TOC.csv", header=TRUE, sep=";" )
+Nutrients_Total_Nitrogen<-read.csv("Waterbase/Nutrients_Total_Nitrogen.csv", header=TRUE, sep=";" )
+Nutrients_Total_Phosphorous<-read.csv("Waterbase/Nutrients_Total_Phosphorous.csv", header=TRUE, sep=";" )
 
 # Waterbase extracted tablefor station data.
-#Waterbase_rivers_v14_Nutrients<-read.csv("Waterbase_rivers_v14_Nutrients.csv", header=TRUE, sep=";" )
-Waterbase_rivers_v14_Stations<-read.csv("Waterbase_rivers_v14_Stations.csv", header=TRUE, sep=";" )
-
-# OSM data extracted through overpass-turbo and converted into csv
-slipway<-read.csv("slipway.csv", header=TRUE, sep=";" )
-marina<-(read.csv("marina.csv", header=TRUE, sep=";" ))
-watermills<-(read.csv("watermills.csv", header=TRUE, sep=";" ))
-fishing<-read.csv("fishing.csv", header=TRUE, sep=";" )
-water_works<-read.csv("water_works.csv", header=TRUE, sep=";" )
+Waterbase_rivers_v14_Stations<-read.csv("Waterbase/Waterbase_rivers_v14_Stations.csv", header=TRUE, sep=";" )
 
 # make dataframes for further handling
 Nutrients_Nitrate_MaxYear<-data.frame()
@@ -133,6 +134,7 @@ CCM2_riversegments<-readOGR(".","Riversegments_All")
 
 # list of point dataframes as character. contains all point datasets we would like to analyse as ES proxies + the station data (i.e. water quality)
 points_df_list<-c("watermills","marina","fishing","water_works","slipway", "waterbase_maxyear")
+#points_df_list<-c("waterbase_maxyear")
 
 # lines (rivers)
 lines_df<-CCM2_riversegments
@@ -179,18 +181,41 @@ for(k in 1:length(points_df_list)){
     # merge snapped points back to the rest
     split_points_df_list_snapped[[i]]<-snapped_points
     # show progress
-    print("Dataset")
-    print(i)
-    print("of")
-    print(length(split_points_df_list))
+    print(paste("data-subset",i,"of",length(split_points_df_list),sep=" "))
   } 
   # create snapped points dataframe
   tmp_snapped_merged<-do.call("rbind", split_points_df_list_snapped)
   assign(paste(points_df_list[[k]],"_snapped",sep=""),tmp_snapped_merged)
   # write csv
-  write.csv(fullycombined, file=(paste(points_df_list[[k]],"_snapped.csv",sep="")))
+  write.csv(tmp_snapped_merged, file=(paste(points_df_list[[k]],"_snapped.csv",sep="")))
 } 
 
+### analyse distribution of point features (ES proxies) in relation to water quality
+# match points with water quality values from stations 
+# at the moment this is a "quick and dirty" approach that will not take into account whether or not 
+# a point is actually located at the same river as the station it is linked to.
+# in the future we should explore cost path analysis or similar approache to do this more thoroughly
+
+
+
+points_df_list_snapped<-c("watermills_snapped","marina_snapped","fishing_snapped","water_works_snapped","slipway_snapped")
+
+for (l in 1 : length(points_df_list_snapped)){
+  tmp<-get(points_df_list_snapped[[l]])
+  closestSiteVec <- vector(mode = "numeric",length = nrow(tmp))
+  minDistVec     <- vector(mode = "numeric",length = nrow(tmp))
+
+for (m in 1 : nrow(tmp))
+{
+  distVec <- spDistsN1(waterbase_maxyear_snapped,tmp[m,],longlat = TRUE)
+  minDistVec[m] <- min(distVec)
+  closestSiteVec[m] <- which.min(distVec)
+}
+  PointAssignStations <- as(waterbase_maxyear_snapped[closestSiteVec,]$Nutrients_Total_Nitrogen_MaxYear_Mean,"numeric")
+  tmp_FinalTable = data.frame(coordinates(tmp),tmp$Name,closestSiteVec,minDistVec,PointAssignStations)
+  assign(paste(points_df_list_snapped[[l]],"_matched",sep=""),tmp_FinalTable)
+  write.csv(tmp_FinalTable, file=(paste(points_df_list_snapped[[l]],"_matched.csv",sep="")))
+}
 
 ### Resterampe
 # 
@@ -201,17 +226,6 @@ for(k in 1:length(points_df_list)){
 # coordinates(fullycombined) <- c("Longitude", "Latitude")
 # coordinates(watermills_half) <- c("Lon", "Lat")      
 # proj4string(watermills_half)=CRS("+proj=longlat +datum=WGS84")
-# 
-# watermills_half_ETRS<-spTransform(watermills_half, CRS( "+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs" ))
-# 
-# gClip <- function(shp, bb){
-#   if(class(bb) == "matrix") b_poly <- as(extent(as.vector(t(bb))), "SpatialPolygons")
-#   else b_poly <- as(extent(bb), "SpatialPolygons")
-#   gIntersection(shp, b_poly, byid = T)
-# }
-# 
-# bb<-bbox(watermills_half_ETRS)
-# CCM2_riversegments_clipped<-gClip(CCM2_riversegments,bb)
 # 
 # pts_buffer=gBuffer(watermills_half_ETRS,width=500,byid=T) # This is the points with a buffer 
 # point_buffer_intersect_river=over(pts_buffer,CCM2_riversegments_clipped) 
