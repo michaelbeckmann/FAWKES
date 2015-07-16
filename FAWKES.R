@@ -129,15 +129,13 @@ write.csv(fullycombined, file="Waterbase_maxyear_fullycombined.csv")
 waterbase_maxyear<-read.csv("Waterbase_maxyear_fullycombined.csv", header=TRUE )
 waterbase_maxyear<-waterbase_maxyear[complete.cases(waterbase_maxyear[,21:22]),]
 
+# lines (rivers)
 # read lines (CCM2 river data), its a shapefile. Has been combined using ArcGIS from all sub-datasets available for Europe
-CCM2_riversegments<-readOGR("CCM2/","Riversegments_All")
+lines_df<-readOGR("CCM2/","Riversegments_All")
 
 # list of point dataframes as character. contains all point datasets we would like to analyse as ES proxies + the station data (i.e. water quality)
 points_df_list<-c("watermills","marina","fishing","water_works","slipway", "waterbase_maxyear")
 #points_df_list<-c("marina","fishing","water_works","slipway","waterbase_maxyear")
-
-# lines (rivers)
-lines_df<-CCM2_riversegments
 
 # function gClip (somewhere from the web)
 gClip <- function(shp, bb){
@@ -161,10 +159,10 @@ for(k in 1:length(points_df_list)){
   tmp<-spTransform(tmp, CRS( "+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs" ))
   
   #assign unsnapped points back to input data for comparison
-  assign(points_df_list[[k]], tmp)
+  #assign(points_df_list[[k]], tmp)
 
-  # split points into chunks of 100 and define splitpointslist
-  split_points_df_list<-split(tmp, (0:nrow(tmp)%/%100))
+  # split points into chunks of 100 or 50 and define splitpointslist
+  split_points_df_list<-split(tmp, (0:nrow(tmp)%/%200))
   split_points_df_list_snapped<-split_points_df_list
 
   # inner loop start
@@ -182,10 +180,11 @@ for(k in 1:length(points_df_list)){
     split_points_df_list_snapped[[i]]<-snapped_points
     # show progress
     print(paste("data-subset",i,"of",length(split_points_df_list),sep=" "))
+    rm(lines_df_clipped,snapped_points)
   } 
   # create snapped points dataframe
   tmp_snapped_merged<-do.call("rbind", split_points_df_list_snapped)
-  assign(paste(points_df_list[[k]],"_snapped",sep=""),tmp_snapped_merged)
+  #assign(paste(points_df_list[[k]],"_snapped",sep=""),tmp_snapped_merged)
   # write csv
   write.csv(tmp_snapped_merged, file=(paste(points_df_list[[k]],"_snapped.csv",sep="")))
 } 
