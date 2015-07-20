@@ -10,7 +10,7 @@ require(rgeos)
 library(pryr)
 
 ### load all files and prepare data (step 1), 
-
+## test
 # OSM data extracted through overpass-turbo and converted into csv
 slipway<-read.csv("OSM_data/slipway.csv", header=TRUE, sep=";" )
 marina<-(read.csv("OSM_data/marina.csv", header=TRUE, sep=";" ))
@@ -196,26 +196,47 @@ for(k in 1:length(points_df_list)){
 # a point is actually located at the same river as the station it is linked to.
 # in the future we should explore cost path analysis or similar approache to do this more thoroughly
 
+watermills_snapped<-readOGR(".","watermills_snapped")
+marina_snapped<-readOGR(".","marina_snapped")
+fishing_snapped<-readOGR(".","fishing_snapped")
+water_works_snapped<-readOGR(".","water_works_snapped")
+slipway_snapped<-readOGR(".","slipway_snapped")
 
+waterbase_maxyear_snapped<-read.csv("waterbase_maxyear_snapped.csv", header=TRUE )
+coordinates(waterbase_maxyear_snapped) <- c("X.1", "Y")      
+#waterbase_maxyear_snapped<-readOGR(".","waterbase_maxyear_snapped")
 
 points_df_list_snapped<-c("watermills_snapped","marina_snapped","fishing_snapped","water_works_snapped","slipway_snapped")
+water_variables_list<-c("EQR_Phytobenthos_G_DeterminandStatusClass","EQR_Phytobenthos_G_MeanValueEQR","EQR_Phytobenthos_E_DeterminandStatusClass", "EQR_Phytobenthos_E_MeanValueEQR","EQR_Invertebrate_DeterminandStatusClass","EQR_Invertebrate_MeanValueEQR","Nutrients_Nitrate_MaxYear_Mean","Nutrients_Nitrite_MaxYear_Mean","Nutrients_PH_MaxYear_Mean","Nutrients_Temperature_MaxYear_Mean","Nutrients_TOC_MaxYear_Mean","Nutrients_Total_Nitrogen_MaxYear_Mean","Nutrients_Total_Phosphorous_MaxYear_Mean")
+#points_df_list_snapped<-c("slipway_snapped")
 
-for (l in 1 : length(points_df_list_snapped)){
-  tmp<-get(points_df_list_snapped[[l]])
-  closestSiteVec <- vector(mode = "numeric",length = nrow(tmp))
-  minDistVec     <- vector(mode = "numeric",length = nrow(tmp))
 
-for (m in 1 : nrow(tmp))
-{
-  distVec <- spDistsN1(waterbase_maxyear_snapped,tmp[m,],longlat = TRUE)
-  minDistVec[m] <- min(distVec)
-  closestSiteVec[m] <- which.min(distVec)
-}
-  PointAssignStations <- as(waterbase_maxyear_snapped[closestSiteVec,]$Nutrients_Total_Nitrogen_MaxYear_Mean,"numeric")
-  tmp_FinalTable = data.frame(coordinates(tmp),tmp$Name,closestSiteVec,minDistVec,PointAssignStations)
-  assign(paste(points_df_list_snapped[[l]],"_matched",sep=""),tmp_FinalTable)
-  write.csv(tmp_FinalTable, file=(paste(points_df_list_snapped[[l]],"_matched.csv",sep="")))
-}
+    for (l in 1 : length(points_df_list_snapped)){
+      tmp<-get(points_df_list_snapped[[l]])
+      closestSiteVec <- vector(mode = "numeric",length = nrow(tmp))
+      minDistVec     <- vector(mode = "numeric",length = nrow(tmp))
+    
+        for (m in 1 : nrow(tmp))
+        {
+          distVec <- spDistsN1(waterbase_maxyear_snapped,tmp[m,],longlat = TRUE)
+          minDistVec[m] <- min(distVec)
+          closestSiteVec[m] <- which.min(distVec)
+          print(l)
+        }
+      
+      
+      for (n in 1 : length(water_variables_list)){
+      PointAssignStations <- as(waterbase_maxyear_snapped[closestSiteVec,][44,],"numeric")
+      tmp_FinalTable = data.frame(coordinates(tmp),tmp$Name,closestSiteVec,minDistVec,PointAssignStations)
+      assign(paste(points_df_list_snapped[[l]],"_matched",sep=""),tmp_FinalTable)
+      write.csv(tmp_FinalTable, file=(paste(points_df_list_snapped[[l]],"_matched.csv",sep="")))
+      
+      png(filename=paste("~/UFZ/FAWKES/",points_df_list_snapped[[l]],"_matched.png",sep=""))
+      hist(waterbase_maxyear_snapped$Nutrients_Total_Nitrogen_MaxYear_Mean, xlim=c(0,30), breaks=200, main=paste(points_df_list_snapped[[l]],"_matched",sep=""))
+      hist(tmp_FinalTable$PointAssignStations, xlim=c(0,30),add=TRUE,breaks=200)
+      dev.off()
+      }
+    }
 
 ### Resterampe
 # 
