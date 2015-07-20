@@ -7,6 +7,7 @@ require(maptools)
 require(spatstat)
 require (raster)
 require(rgeos)
+library(pryr)
 
 ### load all files and prepare data (step 1), 
 
@@ -19,108 +20,108 @@ water_works<-read.csv("OSM_data/water_works.csv", header=TRUE, sep=";" )
 
 # the following section may be skipped and the fullycombined.csv can be loaded directly
 {
-# load Waterbase extracted tables (coming from ms access) for water quality.
-# files still contain alle measurement timesteps
-EQR_Phytobenthos_G<-read.csv("Waterbase/EQR_Phytobenthos_G.csv", header=TRUE, sep=";" )
-EQR_Invertebrate<-read.csv("Waterbase/EQR_Invertebrate.csv", header=TRUE, sep=";" )
-EQR_Phytobenthos_E<-read.csv("Waterbase/EQR_Phytobenthos_E.csv", header=TRUE, sep=";" )
-Nutrients_Nitrate<-read.csv("Waterbase/Nutrients_Nitrate.csv", header=TRUE, sep=";" )
-Nutrients_Nitrite<-read.csv("Waterbase/Nutrients_Nitrite.csv", header=TRUE, sep=";" )
-Nutrients_PH<-read.csv("Waterbase/Nutrients_PH.csv", header=TRUE, sep=";" )
-Nutrients_Temperature<-read.csv("Waterbase/Nutrients_Temperature.csv", header=TRUE, sep=";" )
-Nutrients_TOC<-read.csv("Waterbase/Nutrients_TOC.csv", header=TRUE, sep=";" )
-Nutrients_Total_Nitrogen<-read.csv("Waterbase/Nutrients_Total_Nitrogen.csv", header=TRUE, sep=";" )
-Nutrients_Total_Phosphorous<-read.csv("Waterbase/Nutrients_Total_Phosphorous.csv", header=TRUE, sep=";" )
-
-# Waterbase extracted tablefor station data.
-Waterbase_rivers_v14_Stations<-read.csv("Waterbase/Waterbase_rivers_v14_Stations.csv", header=TRUE, sep=";" )
-
-# make dataframes for further handling
-Nutrients_Nitrate_MaxYear<-data.frame()
-Nutrients_Nitrite_MaxYear<-data.frame()
-Nutrients_PH_MaxYear<-data.frame()
-Nutrients_Temperature_MaxYear<-data.frame()
-Nutrients_TOC_MaxYear<-data.frame()
-Nutrients_Total_Nitrogen_MaxYear<-data.frame()
-Nutrients_Total_Phosphorous_MaxYear<-data.frame()
-
-# subset all dataset to contain only one measurement per station (that of the last mentioned year)
-
-for(i in 1:length(unique(Nutrients_Nitrate$WaterbaseID))){ 
-  df<-subset(Nutrients_Nitrate,Nutrients_Nitrate[,"WaterbaseID"]==(paste(unique(Nutrients_Nitrate$WaterbaseID)[i])))
-  subdf<-(df[df$Year==(max(df$Year)), ])
-  Nutrients_Nitrate_MaxYear<-rbind(Nutrients_Nitrate_MaxYear, subdf)
-  #print(i)
-} 
-
-for(i in 1:length(unique(Nutrients_Nitrite$WaterbaseID))){ 
-  df<-subset(Nutrients_Nitrite,Nutrients_Nitrite[,"WaterbaseID"]==(paste(unique(Nutrients_Nitrite$WaterbaseID)[i])))
-  subdf<-(df[df$Year==(max(df$Year)), ])
-  Nutrients_Nitrite_MaxYear<-rbind(Nutrients_Nitrite_MaxYear, subdf)
-  #print(i)
-} 
-
-for(i in 1:length(unique(Nutrients_PH$WaterbaseID))){ 
-  df<-subset(Nutrients_PH,Nutrients_PH[,"WaterbaseID"]==(paste(unique(Nutrients_PH$WaterbaseID)[i])))
-  subdf<-(df[df$Year==(max(df$Year)), ])
-  Nutrients_PH_MaxYear<-rbind(Nutrients_PH_MaxYear, subdf)
-  #print(i)
-} 
-
-for(i in 1:length(unique(Nutrients_Temperature$WaterbaseID))){ 
-  df<-subset(Nutrients_Temperature,Nutrients_Temperature[,"WaterbaseID"]==(paste(unique(Nutrients_Temperature$WaterbaseID)[i])))
-  subdf<-(df[df$Year==(max(df$Year)), ])
-  Nutrients_Temperature_MaxYear<-rbind(Nutrients_Temperature_MaxYear, subdf)
-  #print(i)
-} 
-
-for(i in 1:length(unique(Nutrients_TOC$WaterbaseID))){ 
-  df<-subset(Nutrients_TOC,Nutrients_TOC[,"WaterbaseID"]==(paste(unique(Nutrients_TOC$WaterbaseID)[i])))
-  subdf<-(df[df$Year==(max(df$Year)), ])
-  Nutrients_TOC_MaxYear<-rbind(Nutrients_TOC_MaxYear, subdf)
-  #print(i)
-} 
-
-for(i in 1:length(unique(Nutrients_Total_Nitrogen$WaterbaseID))){ 
-  df<-subset(Nutrients_Total_Nitrogen,Nutrients_Total_Nitrogen[,"WaterbaseID"]==(paste(unique(Nutrients_Total_Nitrogen$WaterbaseID)[i])))
-  subdf<-(df[df$Year==(max(df$Year)), ])
-  Nutrients_Total_Nitrogen_MaxYear<-rbind(Nutrients_Total_Nitrogen_MaxYear, subdf)
-  #print(i)
-} 
-
-for(i in 1:length(unique(Nutrients_Total_Phosphorous$WaterbaseID))){ 
-  df<-subset(Nutrients_Total_Phosphorous,Nutrients_Total_Phosphorous[,"WaterbaseID"]==(paste(unique(Nutrients_Total_Phosphorous$WaterbaseID)[i])))
-  subdf<-(df[df$Year==(max(df$Year)), ])
-  Nutrients_Total_Phosphorous_MaxYear<-rbind(Nutrients_Total_Phosphorous_MaxYear, subdf)
-  #print(i)
-} 
-
-# create list of all sub-setted datasets
-datalist<-c("EQR_Phytobenthos_G","EQR_Phytobenthos_E", "EQR_Invertebrate", "Nutrients_Nitrate_MaxYear","Nutrients_Nitrite_MaxYear","Nutrients_PH_MaxYear","Nutrients_Temperature_MaxYear","Nutrients_TOC_MaxYear","Nutrients_Total_Nitrogen_MaxYear","Nutrients_Total_Phosphorous_MaxYear" )
-
-# add meaningful column names 
-for (j in 1:length(datalist)){
-  tmp<-get(datalist[j])
-  colnames(tmp) <- paste(datalist[j], colnames(tmp), sep = "_")
-  colnames(tmp)[grep("WaterbaseID", colnames(tmp))]<- "WaterbaseID"
-  assign(datalist[j], tmp)
-}
-
-# join everything using the waterbaseID, needs to be done in steps for memory reasons
-total1<-join_all(list(EQR_Phytobenthos_G,EQR_Phytobenthos_E, EQR_Invertebrate), by="WaterbaseID", type = 'full')
-total1<-cbind(total1[c(11,7,9,18,20,28,30)])
-total2<-join_all(list(Nutrients_Nitrate_MaxYear,Nutrients_Nitrite_MaxYear,Nutrients_PH_MaxYear,Nutrients_Temperature_MaxYear), by="WaterbaseID", type = 'full')
-total2<-cbind(total2[c(1,6,14,22,30)])
-total3<-join_all(list(Nutrients_TOC_MaxYear,Nutrients_Total_Nitrogen_MaxYear,Nutrients_Total_Phosphorous_MaxYear), by="WaterbaseID", type = 'full')
-total3<-cbind(total3[c(1,6,14,22)])
-total<-join_all(list(total1,total2,total3), by="WaterbaseID", type = 'full', match="first")
-fullycombined<-join_all(list(Waterbase_rivers_v14_Stations, total), by="WaterbaseID", type = 'full', match="first")
-
-# change column names for Lat and Lon (needed later for the loop to work)
-colnames(fullycombined)[21:22]<-c("Lon","Lat")
-
-# write combined waterbase dataframe as csv
-write.csv(fullycombined, file="Waterbase_maxyear_fullycombined.csv")
+# # load Waterbase extracted tables (coming from ms access) for water quality.
+# # files still contain alle measurement timesteps
+# EQR_Phytobenthos_G<-read.csv("Waterbase/EQR_Phytobenthos_G.csv", header=TRUE, sep=";" )
+# EQR_Invertebrate<-read.csv("Waterbase/EQR_Invertebrate.csv", header=TRUE, sep=";" )
+# EQR_Phytobenthos_E<-read.csv("Waterbase/EQR_Phytobenthos_E.csv", header=TRUE, sep=";" )
+# Nutrients_Nitrate<-read.csv("Waterbase/Nutrients_Nitrate.csv", header=TRUE, sep=";" )
+# Nutrients_Nitrite<-read.csv("Waterbase/Nutrients_Nitrite.csv", header=TRUE, sep=";" )
+# Nutrients_PH<-read.csv("Waterbase/Nutrients_PH.csv", header=TRUE, sep=";" )
+# Nutrients_Temperature<-read.csv("Waterbase/Nutrients_Temperature.csv", header=TRUE, sep=";" )
+# Nutrients_TOC<-read.csv("Waterbase/Nutrients_TOC.csv", header=TRUE, sep=";" )
+# Nutrients_Total_Nitrogen<-read.csv("Waterbase/Nutrients_Total_Nitrogen.csv", header=TRUE, sep=";" )
+# Nutrients_Total_Phosphorous<-read.csv("Waterbase/Nutrients_Total_Phosphorous.csv", header=TRUE, sep=";" )
+# 
+# # Waterbase extracted tablefor station data.
+# Waterbase_rivers_v14_Stations<-read.csv("Waterbase/Waterbase_rivers_v14_Stations.csv", header=TRUE, sep=";" )
+# 
+# # make dataframes for further handling
+# Nutrients_Nitrate_MaxYear<-data.frame()
+# Nutrients_Nitrite_MaxYear<-data.frame()
+# Nutrients_PH_MaxYear<-data.frame()
+# Nutrients_Temperature_MaxYear<-data.frame()
+# Nutrients_TOC_MaxYear<-data.frame()
+# Nutrients_Total_Nitrogen_MaxYear<-data.frame()
+# Nutrients_Total_Phosphorous_MaxYear<-data.frame()
+# 
+# # subset all dataset to contain only one measurement per station (that of the last mentioned year)
+# 
+# for(i in 1:length(unique(Nutrients_Nitrate$WaterbaseID))){ 
+#   df<-subset(Nutrients_Nitrate,Nutrients_Nitrate[,"WaterbaseID"]==(paste(unique(Nutrients_Nitrate$WaterbaseID)[i])))
+#   subdf<-(df[df$Year==(max(df$Year)), ])
+#   Nutrients_Nitrate_MaxYear<-rbind(Nutrients_Nitrate_MaxYear, subdf)
+#   #print(i)
+# } 
+# 
+# for(i in 1:length(unique(Nutrients_Nitrite$WaterbaseID))){ 
+#   df<-subset(Nutrients_Nitrite,Nutrients_Nitrite[,"WaterbaseID"]==(paste(unique(Nutrients_Nitrite$WaterbaseID)[i])))
+#   subdf<-(df[df$Year==(max(df$Year)), ])
+#   Nutrients_Nitrite_MaxYear<-rbind(Nutrients_Nitrite_MaxYear, subdf)
+#   #print(i)
+# } 
+# 
+# for(i in 1:length(unique(Nutrients_PH$WaterbaseID))){ 
+#   df<-subset(Nutrients_PH,Nutrients_PH[,"WaterbaseID"]==(paste(unique(Nutrients_PH$WaterbaseID)[i])))
+#   subdf<-(df[df$Year==(max(df$Year)), ])
+#   Nutrients_PH_MaxYear<-rbind(Nutrients_PH_MaxYear, subdf)
+#   #print(i)
+# } 
+# 
+# for(i in 1:length(unique(Nutrients_Temperature$WaterbaseID))){ 
+#   df<-subset(Nutrients_Temperature,Nutrients_Temperature[,"WaterbaseID"]==(paste(unique(Nutrients_Temperature$WaterbaseID)[i])))
+#   subdf<-(df[df$Year==(max(df$Year)), ])
+#   Nutrients_Temperature_MaxYear<-rbind(Nutrients_Temperature_MaxYear, subdf)
+#   #print(i)
+# } 
+# 
+# for(i in 1:length(unique(Nutrients_TOC$WaterbaseID))){ 
+#   df<-subset(Nutrients_TOC,Nutrients_TOC[,"WaterbaseID"]==(paste(unique(Nutrients_TOC$WaterbaseID)[i])))
+#   subdf<-(df[df$Year==(max(df$Year)), ])
+#   Nutrients_TOC_MaxYear<-rbind(Nutrients_TOC_MaxYear, subdf)
+#   #print(i)
+# } 
+# 
+# for(i in 1:length(unique(Nutrients_Total_Nitrogen$WaterbaseID))){ 
+#   df<-subset(Nutrients_Total_Nitrogen,Nutrients_Total_Nitrogen[,"WaterbaseID"]==(paste(unique(Nutrients_Total_Nitrogen$WaterbaseID)[i])))
+#   subdf<-(df[df$Year==(max(df$Year)), ])
+#   Nutrients_Total_Nitrogen_MaxYear<-rbind(Nutrients_Total_Nitrogen_MaxYear, subdf)
+#   #print(i)
+# } 
+# 
+# for(i in 1:length(unique(Nutrients_Total_Phosphorous$WaterbaseID))){ 
+#   df<-subset(Nutrients_Total_Phosphorous,Nutrients_Total_Phosphorous[,"WaterbaseID"]==(paste(unique(Nutrients_Total_Phosphorous$WaterbaseID)[i])))
+#   subdf<-(df[df$Year==(max(df$Year)), ])
+#   Nutrients_Total_Phosphorous_MaxYear<-rbind(Nutrients_Total_Phosphorous_MaxYear, subdf)
+#   #print(i)
+# } 
+# 
+# # create list of all sub-setted datasets
+# datalist<-c("EQR_Phytobenthos_G","EQR_Phytobenthos_E", "EQR_Invertebrate", "Nutrients_Nitrate_MaxYear","Nutrients_Nitrite_MaxYear","Nutrients_PH_MaxYear","Nutrients_Temperature_MaxYear","Nutrients_TOC_MaxYear","Nutrients_Total_Nitrogen_MaxYear","Nutrients_Total_Phosphorous_MaxYear" )
+# 
+# # add meaningful column names 
+# for (j in 1:length(datalist)){
+#   tmp<-get(datalist[j])
+#   colnames(tmp) <- paste(datalist[j], colnames(tmp), sep = "_")
+#   colnames(tmp)[grep("WaterbaseID", colnames(tmp))]<- "WaterbaseID"
+#   assign(datalist[j], tmp)
+# }
+# 
+# # join everything using the waterbaseID, needs to be done in steps for memory reasons
+# total1<-join_all(list(EQR_Phytobenthos_G,EQR_Phytobenthos_E, EQR_Invertebrate), by="WaterbaseID", type = 'full')
+# total1<-cbind(total1[c(11,7,9,18,20,28,30)])
+# total2<-join_all(list(Nutrients_Nitrate_MaxYear,Nutrients_Nitrite_MaxYear,Nutrients_PH_MaxYear,Nutrients_Temperature_MaxYear), by="WaterbaseID", type = 'full')
+# total2<-cbind(total2[c(1,6,14,22,30)])
+# total3<-join_all(list(Nutrients_TOC_MaxYear,Nutrients_Total_Nitrogen_MaxYear,Nutrients_Total_Phosphorous_MaxYear), by="WaterbaseID", type = 'full')
+# total3<-cbind(total3[c(1,6,14,22)])
+# total<-join_all(list(total1,total2,total3), by="WaterbaseID", type = 'full', match="first")
+# fullycombined<-join_all(list(Waterbase_rivers_v14_Stations, total), by="WaterbaseID", type = 'full', match="first")
+# 
+# # change column names for Lat and Lon (needed later for the loop to work)
+# colnames(fullycombined)[21:22]<-c("Lon","Lat")
+# 
+# # write combined waterbase dataframe as csv
+# write.csv(fullycombined, file="Waterbase_maxyear_fullycombined.csv")
 }
 
 ### prepare data (step 2), snap all points to rivers
@@ -134,15 +135,8 @@ waterbase_maxyear<-waterbase_maxyear[complete.cases(waterbase_maxyear[,21:22]),]
 lines_df<-readOGR("CCM2/","Riversegments_All")
 
 # list of point dataframes as character. contains all point datasets we would like to analyse as ES proxies + the station data (i.e. water quality)
-points_df_list<-c("watermills","marina","fishing","water_works","slipway", "waterbase_maxyear")
-#points_df_list<-c("marina","fishing","water_works","slipway","waterbase_maxyear")
-
-# function gClip (somewhere from the web)
-gClip <- function(shp, bb){
-  if(class(bb) == "matrix") b_poly <- as(extent(as.vector(t(bb))), "SpatialPolygons")
-  else b_poly <- as(extent(bb), "SpatialPolygons")
-  gIntersection(shp, b_poly, byid = T)
-}
+#points_df_list<-c("watermills","marina","fishing","water_works","slipway", "waterbase_maxyear")
+points_df_list<-c("slipway")
 
 # outer loop start
 for(k in 1:length(points_df_list)){
@@ -162,18 +156,20 @@ for(k in 1:length(points_df_list)){
   #assign(points_df_list[[k]], tmp)
 
   # split points into chunks of 100 or 50 and define splitpointslist
-  split_points_df_list<-split(tmp, (0:nrow(tmp)%/%200))
+  split_points_df_list<-split(tmp, (0:nrow(tmp)%/%400))
   split_points_df_list_snapped<-split_points_df_list
 
   # inner loop start
   for(i in 1:length(split_points_df_list)){ 
     # create bounding box of points
     bb<-bbox(split_points_df_list[[i]])
-
+    b_poly <- as(extent(bb), "SpatialPolygons")
+    lines_df_clipped<-gIntersection(lines_df, b_poly, byid = T)
+    
 ### ATTENTION: bb needs to be adjusted to include at least maxDist around it!
     
     # clip rivers according to bounding box
-    lines_df_clipped<-gClip(lines_df,bb)
+    #lines_df_clipped<-gClip(lines_df,bb)
     # snap points to rivers, maximum distance is 500 meters
     snapped_points<-snapPointsToLines(split_points_df_list[[i]],lines_df_clipped,maxDist=500)
     # merge snapped points back to the rest
@@ -181,12 +177,17 @@ for(k in 1:length(points_df_list)){
     # show progress
     print(paste("data-subset",i,"of",length(split_points_df_list),sep=" "))
     rm(lines_df_clipped,snapped_points)
+    gc()
   } 
+  
   # create snapped points dataframe
   tmp_snapped_merged<-do.call("rbind", split_points_df_list_snapped)
   #assign(paste(points_df_list[[k]],"_snapped",sep=""),tmp_snapped_merged)
   # write csv
   write.csv(tmp_snapped_merged, file=(paste(points_df_list[[k]],"_snapped.csv",sep="")))
+  writeOGR(tmp_snapped_merged, dsn = ".",layer=paste(points_df_list[k],"_snapped",sep=""),driver = "ESRI Shapefile")
+  rm(tmp_snapped_merged,split_points_df_list_snapped,tmp,split_points_df_list)
+  gc()
 } 
 
 ### analyse distribution of point features (ES proxies) in relation to water quality
