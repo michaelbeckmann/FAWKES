@@ -207,7 +207,8 @@ coordinates(waterbase_maxyear_snapped) <- c("X.1", "Y")
 #waterbase_maxyear_snapped<-readOGR(".","waterbase_maxyear_snapped")
 
 points_df_list_snapped<-c("watermills_snapped","marina_snapped","fishing_snapped","water_works_snapped","slipway_snapped")
-water_variables_list<-c("EQR_Phytobenthos_G_DeterminandStatusClass","EQR_Phytobenthos_G_MeanValueEQR","EQR_Phytobenthos_E_DeterminandStatusClass", "EQR_Phytobenthos_E_MeanValueEQR","EQR_Invertebrate_DeterminandStatusClass","EQR_Invertebrate_MeanValueEQR","Nutrients_Nitrate_MaxYear_Mean","Nutrients_Nitrite_MaxYear_Mean","Nutrients_PH_MaxYear_Mean","Nutrients_Temperature_MaxYear_Mean","Nutrients_TOC_MaxYear_Mean","Nutrients_Total_Nitrogen_MaxYear_Mean","Nutrients_Total_Phosphorous_MaxYear_Mean")
+#water_variables_list<-c("EQR_Phytobenthos_G_DeterminandStatusClass","EQR_Phytobenthos_G_MeanValueEQR","EQR_Phytobenthos_E_DeterminandStatusClass", "EQR_Phytobenthos_E_MeanValueEQR","EQR_Invertebrate_DeterminandStatusClass","EQR_Invertebrate_MeanValueEQR","Nutrients_Nitrate_MaxYear_Mean","Nutrients_Nitrite_MaxYear_Mean","Nutrients_PH_MaxYear_Mean","Nutrients_Temperature_MaxYear_Mean","Nutrients_TOC_MaxYear_Mean","Nutrients_Total_Nitrogen_MaxYear_Mean","Nutrients_Total_Phosphorous_MaxYear_Mean")
+water_variables_list<-c("EQR_Phytobenthos_G_MeanValueEQR", "EQR_Phytobenthos_E_MeanValueEQR","EQR_Invertebrate_MeanValueEQR","Nutrients_Nitrate_MaxYear_Mean","Nutrients_Nitrite_MaxYear_Mean","Nutrients_PH_MaxYear_Mean","Nutrients_Temperature_MaxYear_Mean","Nutrients_TOC_MaxYear_Mean","Nutrients_Total_Nitrogen_MaxYear_Mean","Nutrients_Total_Phosphorous_MaxYear_Mean")
 #points_df_list_snapped<-c("slipway_snapped")
 
 
@@ -221,19 +222,20 @@ water_variables_list<-c("EQR_Phytobenthos_G_DeterminandStatusClass","EQR_Phytobe
           distVec <- spDistsN1(waterbase_maxyear_snapped,tmp[m,],longlat = TRUE)
           minDistVec[m] <- min(distVec)
           closestSiteVec[m] <- which.min(distVec)
-          print(l)
         }
       
       
       for (n in 1 : length(water_variables_list)){
-      PointAssignStations <- as(waterbase_maxyear_snapped[closestSiteVec,][44,],"numeric")
+      PointAssignStations <- as(as.data.frame(waterbase_maxyear_snapped)[closestSiteVec,][,paste(water_variables_list[n])],"numeric")
       tmp_FinalTable = data.frame(coordinates(tmp),tmp$Name,closestSiteVec,minDistVec,PointAssignStations)
-      assign(paste(points_df_list_snapped[[l]],"_matched",sep=""),tmp_FinalTable)
-      write.csv(tmp_FinalTable, file=(paste(points_df_list_snapped[[l]],"_matched.csv",sep="")))
+      assign(paste(points_df_list_snapped[[l]],water_variables_list[n],"_matched",sep=""),tmp_FinalTable)
+      write.csv(tmp_FinalTable, file=(paste(points_df_list_snapped[[l]],"_",water_variables_list[[n]] ,"_matched.csv",sep="")))
       
-      png(filename=paste("~/UFZ/FAWKES/",points_df_list_snapped[[l]],"_matched.png",sep=""))
-      hist(waterbase_maxyear_snapped$Nutrients_Total_Nitrogen_MaxYear_Mean, xlim=c(0,30), breaks=200, main=paste(points_df_list_snapped[[l]],"_matched",sep=""))
-      hist(tmp_FinalTable$PointAssignStations, xlim=c(0,30),add=TRUE,breaks=200)
+      png(filename=paste("~/UFZ/FAWKES/",points_df_list_snapped[[l]],"_",water_variables_list[[n]],sep=""))
+      hist(as.data.frame(waterbase_maxyear_snapped)[,(paste(water_variables_list[n]))], breaks=200, main=paste(points_df_list_snapped[[l]],"_matched",sep=""))
+      #hist(as.data.frame(waterbase_maxyear_snapped)[,(paste(water_variables_list[n]))], breaks=200,xlim=c(quantile(as.data.frame(waterbase_maxyear_snapped)[,(paste(water_variables_list[n]))],na.rm=TRUE)[[2]],quantile(as.data.frame(waterbase_maxyear_snapped)[,(paste(water_variables_list[n]))],na.rm=TRUE)[[4]]), main=paste(points_df_list_snapped[[l]],"_matched",sep=""))
+      
+      hist(tmp_FinalTable$PointAssignStations, xlim=c(0,30),add=TRUE,breaks=200,col="red")
       dev.off()
       }
     }
