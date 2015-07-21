@@ -1,4 +1,5 @@
 setwd("~/Dropbox/FAWKES/Reading Material/data")
+#~/Dropbox/FAWKES/Reading Material/data/Europe_wide_analysis
 #library("xlsx") # actually, this seems to be rubbish. extremely slow. its better to create csv files from xlsx in libreoffice
 library(plyr)
 require(sp)
@@ -136,7 +137,7 @@ lines_df<-readOGR("CCM2/","Riversegments_All")
 
 # list of point dataframes as character. contains all point datasets we would like to analyse as ES proxies + the station data (i.e. water quality)
 #points_df_list<-c("watermills","marina","fishing","water_works","slipway", "waterbase_maxyear")
-points_df_list<-c("slipway")
+points_df_list<-c("marina")
 
 # outer loop start
 for(k in 1:length(points_df_list)){
@@ -206,8 +207,10 @@ waterbase_maxyear_snapped<-read.csv("waterbase_maxyear_snapped.csv", header=TRUE
 coordinates(waterbase_maxyear_snapped) <- c("X.1", "Y")      
 #waterbase_maxyear_snapped<-readOGR(".","waterbase_maxyear_snapped")
 
-points_df_list_snapped<-c("watermills_snapped","marina_snapped","fishing_snapped","water_works_snapped","slipway_snapped")
-water_variables_list<-c("EQR_Phytobenthos_G_DeterminandStatusClass","EQR_Phytobenthos_G_MeanValueEQR","EQR_Phytobenthos_E_DeterminandStatusClass", "EQR_Phytobenthos_E_MeanValueEQR","EQR_Invertebrate_DeterminandStatusClass","EQR_Invertebrate_MeanValueEQR","Nutrients_Nitrate_MaxYear_Mean","Nutrients_Nitrite_MaxYear_Mean","Nutrients_PH_MaxYear_Mean","Nutrients_Temperature_MaxYear_Mean","Nutrients_TOC_MaxYear_Mean","Nutrients_Total_Nitrogen_MaxYear_Mean","Nutrients_Total_Phosphorous_MaxYear_Mean")
+#points_df_list_snapped<-c("watermills_snapped","marina_snapped","fishing_snapped","water_works_snapped","slipway_snapped")
+points_df_list_snapped<-c("marina_snapped")
+#water_variables_list<-c("EQR_Phytobenthos_G_DeterminandStatusClass","EQR_Phytobenthos_G_MeanValueEQR","EQR_Phytobenthos_E_DeterminandStatusClass", "EQR_Phytobenthos_E_MeanValueEQR","EQR_Invertebrate_DeterminandStatusClass","EQR_Invertebrate_MeanValueEQR","Nutrients_Nitrate_MaxYear_Mean","Nutrients_Nitrite_MaxYear_Mean","Nutrients_PH_MaxYear_Mean","Nutrients_Temperature_MaxYear_Mean","Nutrients_TOC_MaxYear_Mean","Nutrients_Total_Nitrogen_MaxYear_Mean","Nutrients_Total_Phosphorous_MaxYear_Mean")
+water_variables_list<-c("EQR_Phytobenthos_G_MeanValueEQR", "EQR_Phytobenthos_E_MeanValueEQR","EQR_Invertebrate_MeanValueEQR","Nutrients_Nitrate_MaxYear_Mean","Nutrients_Nitrite_MaxYear_Mean","Nutrients_PH_MaxYear_Mean","Nutrients_Temperature_MaxYear_Mean","Nutrients_TOC_MaxYear_Mean","Nutrients_Total_Nitrogen_MaxYear_Mean","Nutrients_Total_Phosphorous_MaxYear_Mean")
 #points_df_list_snapped<-c("slipway_snapped")
 
 
@@ -221,22 +224,67 @@ water_variables_list<-c("EQR_Phytobenthos_G_DeterminandStatusClass","EQR_Phytobe
           distVec <- spDistsN1(waterbase_maxyear_snapped,tmp[m,],longlat = TRUE)
           minDistVec[m] <- min(distVec)
           closestSiteVec[m] <- which.min(distVec)
-          print(l)
         }
       
       
       for (n in 1 : length(water_variables_list)){
-      PointAssignStations <- as(waterbase_maxyear_snapped[closestSiteVec,][44,],"numeric")
+      PointAssignStations <- as(as.data.frame(waterbase_maxyear_snapped)[closestSiteVec,][,paste(water_variables_list[n])],"numeric")
       tmp_FinalTable = data.frame(coordinates(tmp),tmp$Name,closestSiteVec,minDistVec,PointAssignStations)
-      assign(paste(points_df_list_snapped[[l]],"_matched",sep=""),tmp_FinalTable)
-      write.csv(tmp_FinalTable, file=(paste(points_df_list_snapped[[l]],"_matched.csv",sep="")))
+      assign(paste(points_df_list_snapped[[l]],water_variables_list[n],"_matched",sep=""),tmp_FinalTable)
+      write.csv(tmp_FinalTable, file=(paste(points_df_list_snapped[[l]],"_",water_variables_list[[n]] ,"_matched.csv",sep="")))
       
-      png(filename=paste("~/UFZ/FAWKES/",points_df_list_snapped[[l]],"_matched.png",sep=""))
-      hist(waterbase_maxyear_snapped$Nutrients_Total_Nitrogen_MaxYear_Mean, xlim=c(0,30), breaks=200, main=paste(points_df_list_snapped[[l]],"_matched",sep=""))
-      hist(tmp_FinalTable$PointAssignStations, xlim=c(0,30),add=TRUE,breaks=200)
+      png(filename=paste("~/UFZ/FAWKES/",points_df_list_snapped[[l]],"_",water_variables_list[[n]],sep=""))
+      hist(as.data.frame(waterbase_maxyear_snapped)[,(paste(water_variables_list[n]))], breaks=200, main=paste(points_df_list_snapped[[l]],"_matched",sep=""))
+      #hist(as.data.frame(waterbase_maxyear_snapped)[,(paste(water_variables_list[n]))], breaks=200,xlim=c(quantile(as.data.frame(waterbase_maxyear_snapped)[,(paste(water_variables_list[n]))],na.rm=TRUE)[[2]],quantile(as.data.frame(waterbase_maxyear_snapped)[,(paste(water_variables_list[n]))],na.rm=TRUE)[[4]]), main=paste(points_df_list_snapped[[l]],"_matched",sep=""))
+      
+      hist(tmp_FinalTable$PointAssignStations, xlim=c(0,30),add=TRUE,breaks=200,col="red")
       dev.off()
       }
     }
+
+### next steps undertaken in ArcGis
+
+### load data from ArcGIS outpu
+
+## lets start with the waterbase all
+## because ArcGIS is stupid and exports badly formatted txt files we have to do the following little dance
+
+#define new class for importing numbers containing commas that will be automatically removed
+setAs("character", "num.with.commas", function(from) as.numeric(gsub(",", "", from) ) )
+
+tmp<-read.table("Europe_wide_analysis/waterbase_all.txt", header=TRUE, sep=";", quote="\"")
+classes <- sapply(tmp, class)
+classes["FID"]<-"num.with.commas" # more columns will be needed to be changed
+waterbase_all<-read.table("Europe_wide_analysis/waterbase_all.txt", header=TRUE, sep=";", quote="\"", colClasses=classes)
+# waterbase_all$FID<-(waterbase_all$FID+1)
+names(waterbase_all)[3:57]<-names(waterbase_maxyear_snapped)[3:57]
+
+# import marinas data
+tmp<-read.table("Europe_wide_analysis/marinas_all.txt", header=TRUE, sep=";", quote="\"")
+classes <- sapply(tmp, class)
+classes["FacilityID"]<-"num.with.commas" # more columns will be needed to be changed
+classes["Total_Length"]<-"num.with.commas" # more columns will be needed to be changed
+marinas_all<-read.table("Europe_wide_analysis/marinas_all.txt", header=TRUE, sep=";",quote="\"", colClasses=classes)
+colnames(marinas_all)[2]<-"FID"
+
+marinas_waterbase_all<-merge(marinas_all,waterbase_all,by="FID")
+
+hist(marinas_waterbase_all$EQR_Phytobenthos_G_MeanValueEQR[marinas_waterbase_all$EQR_Phytobenthos_G_MeanValueEQR>0][marinas_waterbase_all$Total_Length<10000], breaks=20)
+
+par(mar = c(5, 4, 4, 4) + 0.3)
+
+hist(marinas_waterbase_all$Nutrients_Total_Nitrogen_MaxYear_Mean[marinas_waterbase_all$Nutrients_Total_Nitrogen_MaxYear_Mean>0][marinas_waterbase_all$Total_Length<1000], breaks=20,xlim=c(0,8))
+abline(v=3, col="red")
+mtext(sum(marinas_waterbase_all$Nutrients_Total_Nitrogen_MaxYear_Mean>0&marinas_waterbase_all$Nutrients_Total_Nitrogen_MaxYear_Mean<3&marinas_waterbase_all$Total_Length<1000), line=-2, adj=0.1)
+mtext(sum(marinas_waterbase_all$Nutrients_Total_Nitrogen_MaxYear_Mean>3&marinas_waterbase_all$Total_Length<1000), line=-2, adj=0.2)
+mtext("1000m")
+
+par(new = TRUE)
+hist(waterbase_all$Nutrients_Total_Nitrogen_MaxYear_Mean[waterbase_all$Nutrients_Total_Nitrogen_MaxYear_Mean>0], breaks=200, ylim=c(0,1200),axes=FALSE,xlim=c(0,8),border="grey", xlab="",ylab="",main="")
+abline(v=3, col="red")
+mtext(sum(waterbase_all$Nutrients_Total_Nitrogen_MaxYear_Mean>0&waterbase_all$Nutrients_Total_Nitrogen_MaxYear_Mean<3), line=-2, adj=0.7)
+mtext(sum(waterbase_all$Nutrients_Total_Nitrogen_MaxYear_Mean>3), line=-2, adj=0.9)
+
 
 ### Resterampe
 # 
