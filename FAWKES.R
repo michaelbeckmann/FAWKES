@@ -207,12 +207,9 @@ waterbase_maxyear_snapped<-read.csv("waterbase_maxyear_snapped.csv", header=TRUE
 coordinates(waterbase_maxyear_snapped) <- c("X.1", "Y")      
 #waterbase_maxyear_snapped<-readOGR(".","waterbase_maxyear_snapped")
 
-<<<<<<< HEAD
 #points_df_list_snapped<-c("watermills_snapped","marina_snapped","fishing_snapped","water_works_snapped","slipway_snapped")
 points_df_list_snapped<-c("marina_snapped")
-=======
-points_df_list_snapped<-c("watermills_snapped","marina_snapped","fishing_snapped","water_works_snapped","slipway_snapped")
->>>>>>> e6ef49de59b832ae17df603ad866e7f63bc8bb9d
+
 #water_variables_list<-c("EQR_Phytobenthos_G_DeterminandStatusClass","EQR_Phytobenthos_G_MeanValueEQR","EQR_Phytobenthos_E_DeterminandStatusClass", "EQR_Phytobenthos_E_MeanValueEQR","EQR_Invertebrate_DeterminandStatusClass","EQR_Invertebrate_MeanValueEQR","Nutrients_Nitrate_MaxYear_Mean","Nutrients_Nitrite_MaxYear_Mean","Nutrients_PH_MaxYear_Mean","Nutrients_Temperature_MaxYear_Mean","Nutrients_TOC_MaxYear_Mean","Nutrients_Total_Nitrogen_MaxYear_Mean","Nutrients_Total_Phosphorous_MaxYear_Mean")
 water_variables_list<-c("EQR_Phytobenthos_G_MeanValueEQR", "EQR_Phytobenthos_E_MeanValueEQR","EQR_Invertebrate_MeanValueEQR","Nutrients_Nitrate_MaxYear_Mean","Nutrients_Nitrite_MaxYear_Mean","Nutrients_PH_MaxYear_Mean","Nutrients_Temperature_MaxYear_Mean","Nutrients_TOC_MaxYear_Mean","Nutrients_Total_Nitrogen_MaxYear_Mean","Nutrients_Total_Phosphorous_MaxYear_Mean")
 #points_df_list_snapped<-c("slipway_snapped")
@@ -253,6 +250,21 @@ water_variables_list<-c("EQR_Phytobenthos_G_MeanValueEQR", "EQR_Phytobenthos_E_M
 ## lets start with the waterbase all
 ## because ArcGIS is stupid and exports badly formatted txt files we have to do the following little dance
 
+# read tables function
+setAs("character", "num.with.commas", function(from) as.numeric(gsub(",", "", from) ) )
+read.tables <- function(file.names, ...) {
+    require(plyr)
+  tmp<-read.table(file.names[1], header=TRUE, sep=";", quote="\"")
+  classes <- sapply(tmp, class)
+  classes["FacilityID"]<-"num.with.commas" # more columns will be needed to be changed
+  classes["IncidentID"]<-"num.with.commas" # more columns will be needed to be changed
+  classes["ObjectID"]<-"num.with.commas" # more columns will be needed to be changed
+  classes["Total_Length"]<-"num.with.commas" # more columns will be needed to be changed
+  ldply(file.names, function(fn) data.frame(Filename=fn, read.table(fn,header=TRUE, sep=";",quote="\"", colClasses=classes, ...)))
+}
+
+# read waterbase data
+
 #define new class for importing numbers containing commas that will be automatically removed
 setAs("character", "num.with.commas", function(from) as.numeric(gsub(",", "", from) ) )
 
@@ -260,27 +272,97 @@ tmp<-read.table("Europe_wide_analysis/waterbase_all.txt", header=TRUE, sep=";", 
 classes <- sapply(tmp, class)
 classes["FID"]<-"num.with.commas" # more columns will be needed to be changed
 waterbase_all<-read.table("Europe_wide_analysis/waterbase_all.txt", header=TRUE, sep=";", quote="\"", colClasses=classes)
-# waterbase_all$FID<-(waterbase_all$FID+1)
+### ATTENTION! # for some weired reason, we need to add 1 to the FIDs otherwise its a complete mismatch - *!*&%$ YOU ArcGIS!
+waterbase_all$FID<-(waterbase_all$FID+1) 
 names(waterbase_all)[3:57]<-names(waterbase_maxyear_snapped)[3:57]
 
-# import marinas data
-tmp<-read.table("Europe_wide_analysis/marinas_all.txt", header=TRUE, sep=";", quote="\"")
-classes <- sapply(tmp, class)
-classes["FacilityID"]<-"num.with.commas" # more columns will be needed to be changed
-classes["Total_Length"]<-"num.with.commas" # more columns will be needed to be changed
-marinas_all<-read.table("Europe_wide_analysis/marinas_all.txt", header=TRUE, sep=";",quote="\"", colClasses=classes)
-colnames(marinas_all)[2]<-"FID"
 
+# read non-Strahler based tables
+setwd("Europe_wide_analysis/")
+slipway_all<-read.tables(c("slipway_all.txt"))
+colnames(slipway_all)[3]<-"FID"
+waterworks_all<-read.tables(c("waterworks_all.txt"))
+colnames(waterworks_all)[3]<-"FID"
+watermills_all<-read.tables(c("watermills_all.txt"))
+colnames(watermills_all)[3]<-"FID"
+marinas_all<-read.tables(c("marinas_all.txt"))
+colnames(marinas_all)[3]<-"FID"
+fishing_all<-read.tables(c("fishing_all.txt"))
+colnames(fishing_all)[3]<-"FID"
+setwd("..")
+
+# merge everything according to FID
+slipway_waterbase_all<-merge(slipway_all,waterbase_all,by="FID")
+watermills_waterbase_all<-merge(watermills_all,waterbase_all,by="FID")
 marinas_waterbase_all<-merge(marinas_all,waterbase_all,by="FID")
+fishing_waterbase_all<-merge(fishing_all,waterbase_all,by="FID")
 
-hist(marinas_waterbase_all$EQR_Phytobenthos_G_MeanValueEQR[marinas_waterbase_all$EQR_Phytobenthos_G_MeanValueEQR>0][marinas_waterbase_all$Total_Length<10000], breaks=20)
+# read Strahler based tables
+setwd("Europe_wide_analysis/")
+slipway_strahler<-read.tables(c("slipway_s1.txt","slipway_s2.txt","slipway_s3.txt","slipway_s4.txt","slipway_s5.txt","slipway_s6.txt"))
+colnames(slipway_strahler)[3]<-"FID"
+#waterworks_strahler<-read.tables(c("waterworks_s1.txt","waterworks_s2.txt","waterworks_s3.txt","waterworks_s4.txt","waterworks_s5.txt","waterworks_s6.txt"))
+watermills_strahler<-read.tables(c("watermills_s1.txt","watermills_s2.txt","watermills_s3.txt","watermills_s4.txt","watermills_s5.txt","watermills_s6.txt"))
+colnames(watermills_strahler)[3]<-"FID"
+marinas_strahler<-read.tables(c("marinas_s1.txt","marinas_s2.txt","marinas_s3.txt","marinas_s4.txt","marinas_s5.txt","marinas_s6.txt"))
+colnames(marinas_strahler)[3]<-"FID"
+fishing_strahler<-read.tables(c("fishing_s1.txt","fishing_s2.txt","fishing_s3.txt","fishing_s4.txt","fishing_s5.txt","fishing_s6.txt"))
+colnames(fishing_strahler)[3]<-"FID"
+setwd("..")
+
+# merge everything according to FID
+slipway_waterbase_strahler<-merge(slipway_strahler,waterbase_all,by="FID")
+watermills_waterbase_strahler<-merge(watermills_strahler,waterbase_all,by="FID")
+marinas_waterbase_strahler<-merge(marinas_strahler,waterbase_all,by="FID")
+fishing_waterbase_strahler<-merge(fishing_strahler,waterbase_all,by="FID")
+
+# histograms for Strahler based data
+
+strahler_list<-c("slipway_waterbase_strahler","watermills_waterbase_strahler", "marinas_waterbase_strahler","fishing_waterbase_strahler")
+strahler_list_names<-c("OSM: Slipways","OSM: Watermills", "OSM: Marinas","OSM: Fishing")
+
+for (l in 1 : length(strahler_list)){
+  tmp<-get(strahler_list[[l]])
+hist(tmp$Nutrients_Total_Nitrogen_MaxYear_Mean[tmp$Nutrients_Total_Nitrogen_MaxYear_Mean>=0][tmp$Total_Length<=10000], breaks=20, main=paste(strahler_list_names[l]))
+abline(v=3, col="red")
+
+mtext(sum(tmp$Nutrients_Total_Nitrogen_MaxYear_Mean>=0&tmp$Nutrients_Total_Nitrogen_MaxYear_Mean<=3&tmp$Total_Length<=10000), side=3,line=-1.5, at=par("usr")[1]+0.7*diff(par("usr")[1:2]), cex=1.2)
+mtext(sum(tmp$Nutrients_Total_Nitrogen_MaxYear_Mean>=3&tmp$Total_Length<=10000), side=3,line=-1.5, at=par("usr")[1]+0.8*diff(par("usr")[1:2]), cex=1.2)
+mtext("10000m")
+}
+
+for (l in 1 : length(strahler_list)){
+  tmp<-get(strahler_list[[l]])
+  hist(tmp$Nutrients_Total_Nitrogen_MaxYear_Mean[tmp$Nutrients_Total_Nitrogen_MaxYear_Mean>=0][tmp$Total_Length<=1000], breaks=20, main=paste(strahler_list_names[l]))
+  abline(v=1, col="red")
+  all<-length(tmp$Nutrients_Total_Nitrogen_MaxYear_Mean&tmp$Total_Length<=1000)
+  percent_good<-round((sum(tmp$Nutrients_Total_Nitrogen_MaxYear_Mean>=0&tmp$Nutrients_Total_Nitrogen_MaxYear_Mean<=3&tmp$Total_Length<=1000))/all*100)
+  percent_bad<-round((sum(tmp$Nutrients_Total_Nitrogen_MaxYear_Mean>=3&tmp$Total_Length<=1000))/all*100)
+  mtext(sum(tmp$Nutrients_Total_Nitrogen_MaxYear_Mean>=0&tmp$Nutrients_Total_Nitrogen_MaxYear_Mean<=1&tmp$Total_Length<=1000), side=3,line=-1.5, at=par("usr")[1]+0.7*diff(par("usr")[1:2]), cex=1.2)
+  mtext(sum(tmp$Nutrients_Total_Nitrogen_MaxYear_Mean>=1&tmp$Total_Length<=1000), side=3,line=-1.5, at=par("usr")[1]+0.8*diff(par("usr")[1:2]), cex=1.2)
+  mtext(percent_good, side=3,line=-2.5, at=par("usr")[1]+0.7*diff(par("usr")[1:2]), cex=1.2)
+  mtext(percent_bad, side=3,line=-2.5, at=par("usr")[1]+0.8*diff(par("usr")[1:2]), cex=1.2)
+  
+  mtext("1000m")
+}
+
+
+
+
+sum(waterbase_all$Nutrients_Total_Nitrogen_MaxYear_Mean>=0&waterbase_all$Nutrients_Total_Nitrogen_MaxYear_Mean<=3)
+sum(waterbase_all$Nutrients_Total_Nitrogen_MaxYear_Mean>=3)
+
+
+
+
+hist(slipway_waterbase_all$EQR_Phytobenthos_G_MeanValueEQR[slipway_waterbase_all$EQR_Phytobenthos_G_MeanValueEQR>0][slipway_waterbase_all$Total_Length<10000], breaks=20)
 
 par(mar = c(5, 4, 4, 4) + 0.3)
 
-hist(marinas_waterbase_all$Nutrients_Total_Nitrogen_MaxYear_Mean[marinas_waterbase_all$Nutrients_Total_Nitrogen_MaxYear_Mean>0][marinas_waterbase_all$Total_Length<1000], breaks=20,xlim=c(0,8))
+hist(slipway_waterbase_all$Nutrients_Total_Nitrogen_MaxYear_Mean[slipway_waterbase_all$Nutrients_Total_Nitrogen_MaxYear_Mean>0][slipway_waterbase_all$Total_Length<1000], breaks=20,xlim=c(0,8))
 abline(v=3, col="red")
-mtext(sum(marinas_waterbase_all$Nutrients_Total_Nitrogen_MaxYear_Mean>0&marinas_waterbase_all$Nutrients_Total_Nitrogen_MaxYear_Mean<3&marinas_waterbase_all$Total_Length<1000), line=-2, adj=0.1)
-mtext(sum(marinas_waterbase_all$Nutrients_Total_Nitrogen_MaxYear_Mean>3&marinas_waterbase_all$Total_Length<1000), line=-2, adj=0.2)
+mtext(sum(slipway_waterbase_all$Nutrients_Total_Nitrogen_MaxYear_Mean>0&slipway_waterbase_all$Nutrients_Total_Nitrogen_MaxYear_Mean<3&slipway_waterbase_all$Total_Length<1000), line=-2, adj=0.1)
+mtext(sum(slipway_waterbase_all$Nutrients_Total_Nitrogen_MaxYear_Mean>3&slipway_waterbase_all$Total_Length<1000), line=-2, adj=0.2)
 mtext("1000m")
 
 par(new = TRUE)
@@ -360,3 +442,4 @@ mtext(sum(waterbase_all$Nutrients_Total_Nitrogen_MaxYear_Mean>3), line=-2, adj=0
 # # total<-merge(Waterbase_rivers_v14_Stations, EQR_Invertebrate, by="WaterbaseID", suffixes=c('_Waterbase_rivers_v14_Stations', '_EQR_Invertebrate'))
 # # total<-merge(total, EQR_Phytobenthos_E, by="WaterbaseID", suffixes=c('2', 'EQR_Phytobenthos_E'))
 # # total<-merge(total, EQR_Phytobenthos_G, by="WaterbaseID", suffixes=c('3', 'EQR_Phytobenthos_G'))
+
