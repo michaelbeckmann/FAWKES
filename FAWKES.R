@@ -1,5 +1,5 @@
 setwd("~/Dropbox/FAWKES/Reading Material/data")
-#~/Dropbox/FAWKES/Reading Material/data/Europe_wide_analysis
+# ~/Dropbox/FAWKES/Reading Material/data/Europe_wide_analysis
 #library("xlsx") # actually, this seems to be rubbish. extremely slow. its better to create csv files from xlsx in libreoffice
 library(plyr)
 require(sp)
