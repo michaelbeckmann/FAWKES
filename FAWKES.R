@@ -245,7 +245,7 @@ water_variables_list<-c("EQR_Phytobenthos_G_MeanValueEQR", "EQR_Phytobenthos_E_M
 
 ### next steps undertaken in ArcGis
 
-### load data from ArcGIS outpu
+### load data from ArcGIS output
 
 ## lets start with the waterbase all
 ## because ArcGIS is stupid and exports badly formatted txt files we have to do the following little dance
@@ -320,32 +320,70 @@ fishing_waterbase_strahler<-merge(fishing_strahler,waterbase_all,by="FID")
 
 strahler_list<-c("slipway_waterbase_strahler","watermills_waterbase_strahler", "marinas_waterbase_strahler","fishing_waterbase_strahler")
 strahler_list_names<-c("OSM: Slipways","OSM: Watermills", "OSM: Marinas","OSM: Fishing")
+## ATTENTION: somehow Nitrate and Nitrite are all 0, but in the original files there are values. presumably these have been lost in ArcGIS???
+variable_list<-c("EQR_Phytobenthos_G_MeanValueEQR","EQR_Phytobenthos_E_MeanValueEQR","EQR_Invertebrate_MeanValueEQR","Nutrients_Total_Nitrogen_MaxYear_Mean","Nutrients_Total_Phosphorous_MaxYear_Mean")
+EQR_status_variable_list<-c("EQR_Phytobenthos_G_DeterminandStatusClass","EQR_Phytobenthos_E_DeterminandStatusClass","EQR_Invertebrate_DeterminandStatusClass")
+distance_list<-c(500,1000,2000,3000,4000,5000,6000,7000,8000,9000,10000,11000,12000,13000,14000,15000)
+threshold_list<-c(0.6,0.6,0.6,3,0.1)
 
-for (l in 1 : length(strahler_list)){
-  tmp<-get(strahler_list[[l]])
-hist(tmp$Nutrients_Total_Nitrogen_MaxYear_Mean[tmp$Nutrients_Total_Nitrogen_MaxYear_Mean>=0][tmp$Total_Length<=10000], breaks=20, main=paste(strahler_list_names[l]))
-abline(v=3, col="red")
+par(mfrow = c(1, 1), pty = "s")
 
-mtext(sum(tmp$Nutrients_Total_Nitrogen_MaxYear_Mean>=0&tmp$Nutrients_Total_Nitrogen_MaxYear_Mean<=3&tmp$Total_Length<=10000), side=3,line=-1.5, at=par("usr")[1]+0.7*diff(par("usr")[1:2]), cex=1.2)
-mtext(sum(tmp$Nutrients_Total_Nitrogen_MaxYear_Mean>=3&tmp$Total_Length<=10000), side=3,line=-1.5, at=par("usr")[1]+0.8*diff(par("usr")[1:2]), cex=1.2)
-mtext("10000m")
+results_table<-data.frame(poi_name=character(),variable=character(),distance=integer(),threshold=numeric(),good_no=numeric(),bad_no=numeric(),good_pc=numeric(),bad_pc=numeric(),stringsAsFactors=FALSE)
+
+for (m in 1: length(variable_list)){
+  tmp_m<-threshold_list[m]
+  tmp_mn<-variable_list[m] 
+
+# for (l in 1 : length(strahler_list)){
+#   tmp<-get(strahler_list[[l]])
+# hist(tmp$Nutrients_Total_Nitrogen_MaxYear_Mean[tmp$Nutrients_Total_Nitrogen_MaxYear_Mean>=0][tmp$Total_Length<=10000], breaks=20, main=paste(strahler_list_names[l]))
+# abline(v=3, col="red")
+# 
+# mtext(sum(tmp$Nutrients_Total_Nitrogen_MaxYear_Mean>=0&tmp$Nutrients_Total_Nitrogen_MaxYear_Mean<=3&tmp$Total_Length<=10000), side=3,line=-1.5, at=par("usr")[1]+0.7*diff(par("usr")[1:2]), cex=1.2)
+# mtext(sum(tmp$Nutrients_Total_Nitrogen_MaxYear_Mean>=3&tmp$Total_Length<=10000), side=3,line=-1.5, at=par("usr")[1]+0.8*diff(par("usr")[1:2]), cex=1.2)
+# mtext("10000m")
+# }
+
+    for (k in 1: length (distance_list)){
+    tmp_k<-distance_list[k]
+      
+        for (l in 1 : length(strahler_list)){
+          tmp<-get(strahler_list[[l]])
+          hist(tmp[,tmp_mn][tmp[,tmp_mn]>=0][tmp$Total_Length<=tmp_k], breaks=20, main=paste(strahler_list_names[l], sep=" "), xlab=tmp_mn)
+          abline(v=tmp_m, col="red")
+          no_good<-sum(tmp[,tmp_mn]>=0&tmp[,tmp_mn]<=tmp_m&tmp$Total_Length<=tmp_k)
+          no_bad<-sum(tmp[,tmp_mn]>=tmp_m&tmp$Total_Length<=tmp_k)
+          all<-no_good+no_bad
+          percent_good<-round((sum(tmp[,tmp_mn]>=0&tmp[,tmp_mn]<=tmp_m&tmp$Total_Length<=tmp_k))/all*100)
+          percent_bad<-round((sum(tmp[,tmp_mn]>=tmp_m&tmp$Total_Length<=tmp_k))/all*100)
+          mtext(no_good, side=3,line=-1.5, at=par("usr")[1]+0.7*diff(par("usr")[1:2]), cex=1.2)
+          mtext(no_bad, side=3,line=-1.5, at=par("usr")[1]+0.8*diff(par("usr")[1:2]), cex=1.2)
+          mtext(percent_good, side=3,line=-2.5, at=par("usr")[1]+0.7*diff(par("usr")[1:2]), cex=1.2)
+          mtext(percent_bad, side=3,line=-2.5, at=par("usr")[1]+0.8*diff(par("usr")[1:2]), cex=1.2)
+          
+          mtext(tmp_k)
+           results_table_tmp<-data.frame(poi_name=character(),variable=character(),distance=integer(),threshold=numeric(),good_no=numeric(),bad_no=numeric(),good_pc=numeric(),bad_pc=numeric(),stringsAsFactors=FALSE)
+           results_table_tmp[1,]<-c(strahler_list_names[[l]],tmp_mn,tmp_k,tmp_m,no_good,no_bad,percent_good,percent_bad)
+           results_table<-rbind(results_table,results_table_tmp)
+        }
+      
+    }
+
 }
 
-for (l in 1 : length(strahler_list)){
-  tmp<-get(strahler_list[[l]])
-  hist(tmp$Nutrients_Total_Nitrogen_MaxYear_Mean[tmp$Nutrients_Total_Nitrogen_MaxYear_Mean>=0][tmp$Total_Length<=1000], breaks=20, main=paste(strahler_list_names[l]))
-  abline(v=1, col="red")
-  all<-length(tmp$Nutrients_Total_Nitrogen_MaxYear_Mean&tmp$Total_Length<=1000)
-  percent_good<-round((sum(tmp$Nutrients_Total_Nitrogen_MaxYear_Mean>=0&tmp$Nutrients_Total_Nitrogen_MaxYear_Mean<=3&tmp$Total_Length<=1000))/all*100)
-  percent_bad<-round((sum(tmp$Nutrients_Total_Nitrogen_MaxYear_Mean>=3&tmp$Total_Length<=1000))/all*100)
-  mtext(sum(tmp$Nutrients_Total_Nitrogen_MaxYear_Mean>=0&tmp$Nutrients_Total_Nitrogen_MaxYear_Mean<=1&tmp$Total_Length<=1000), side=3,line=-1.5, at=par("usr")[1]+0.7*diff(par("usr")[1:2]), cex=1.2)
-  mtext(sum(tmp$Nutrients_Total_Nitrogen_MaxYear_Mean>=1&tmp$Total_Length<=1000), side=3,line=-1.5, at=par("usr")[1]+0.8*diff(par("usr")[1:2]), cex=1.2)
-  mtext(percent_good, side=3,line=-2.5, at=par("usr")[1]+0.7*diff(par("usr")[1:2]), cex=1.2)
-  mtext(percent_bad, side=3,line=-2.5, at=par("usr")[1]+0.8*diff(par("usr")[1:2]), cex=1.2)
+pois<-unique(results_table$poi_name)
+
+for (p in 1: length (unique(results_table$poi_name)){
+  pois_tmp<-pois[[p]]
+  for (q in 1: length (unique(results_table$variable)){
   
-  mtext("1000m")
+    plot(results_table$distance[results_table$poi_name=="OSM: Slipways"&results_table$variable=="Nutrients_Total_Nitrogen_MaxYear_Mean"],results_table$good_pc[results_table$poi_name=="OSM: Slipways"&results_table$variable=="Nutrients_Total_Nitrogen_MaxYear_Mean"], xlab ="distance (m)", ylab = "percent_good", main="Nutrients_Total_Nitrogen_MaxYear_Mean OSM: Slipways")
+#    mtext(no_bad, side=3,line=-1.5, at=par("usr")[1]+0.8*diff(par("usr")[1:2]), cex=1.2)
+    
+    plot(results_table$distance[results_table$poi_name=="OSM: Slipways"&results_table$variable=="Nutrients_Total_Phosphorous_MaxYear_Mean"],results_table$good_pc[results_table$poi_name=="OSM: Slipways"&results_table$variable=="Nutrients_Total_Phosphorous_MaxYear_Mean"], xlab ="distance (m)", ylab = "percent_good", main="Nutrients_Total_Phosphorous_MaxYear_Mean OSM: Slipways")
+  
+  }
 }
-
 
 
 
@@ -370,6 +408,60 @@ hist(waterbase_all$Nutrients_Total_Nitrogen_MaxYear_Mean[waterbase_all$Nutrients
 abline(v=3, col="red")
 mtext(sum(waterbase_all$Nutrients_Total_Nitrogen_MaxYear_Mean>0&waterbase_all$Nutrients_Total_Nitrogen_MaxYear_Mean<3), line=-2, adj=0.7)
 mtext(sum(waterbase_all$Nutrients_Total_Nitrogen_MaxYear_Mean>3), line=-2, adj=0.9)
+
+
+# new structure
+# for loop for running different values as thresholds
+# - Ammoinium-N <= 0,3 mg/l // Ammonium (NH4): 0.4 mg/l
+# - Nitrit-N <= 0,1 mg/l //Nitrite-N <= 0,2 mg/l
+# - Nitrate-N <= 2,5 mg/l // Nitrate (No3): <=11,1 mg/l (clean water bodies show values between 0 and 10 mg/l)
+# - Ortho-Phosphate-P: <= 0,1 mg/l // Ortho-Phosphate: 0.2 mg/l
+# - Chloride: 100 mg/l
+# - Sulfate: 100 mg/l
+
+# for loop nested within to run at different scales (500-20000m)
+# figure that summarises alteration of percentage over scale
+# Ammonium:
+#   Güteklasse:
+#   0.5 mg/l
+# Grenzwerte:Trinkwasser maximal 0,5 mg/l; Gewässer maximal 0,5 mg/l. Nach Schmitt-Vortrag 0.4 mg/l.
+# 
+# 
+# Nitrit:
+#   Güteklasse
+# I:    <=0.02 mg/l
+# I-II:    <=0.1 mg/l
+# II:    <=0.2 mg/l (Zielvorgabe)
+# II-III:    <=0.5 mg/l
+# III:    <=10 mg/l
+# III-IV:    <=20 mg/l
+# V:    >20 mg/l
+# 
+# Trinkwasser: maximal 0,1 mg/l; Frischgewässer: maximal 0,03 mg/l. In sauberen Gewässern liegt der Nitritgehalt zwischen 0 mg/l und 0,2 mg/l, Werte, die darüber liegen weisen auf eine Verunreinigung hin.
+# 
+# Nitrat:
+#   Trinkwasser: 50 mg/l (Trinkwasserrichtlinie); Fischgewässer: maximal 20 mg/l. Richtwerten zufolge liegt die optimale Nitratmenge in sauberen Gewässern zwischen 0,1 mg/l und 8 mg/l, bei verschmutzten Gewässern beträgt sie meist 50 mg/l bis 200 mg/l.
+# 
+# 
+# Ortho-Phosphat:
+#   <= 0.1 mg/l Natürlich
+# Seit dem 1.1.1985 gilt die Phosphathöchstmengenverodrnung für Waschmittel von 0,8 mg/l. Wirkung: Bei Überschreitung des Grenzwertes (1 mg/l) führt Phosphat zur Eutrophierung, was ein Umkippen des Gewässers zur Folge hat. Der optimale Phosphatwert beträgt in sauberen Gewässern 0,03 mg/l bis 0,2 mg/l, bei verunreinigten Gewässern etwa 0,3 mg/l bis 12 mg/l.
+# 
+# Chlorid:
+#   Güteklasse
+# I:    <= 25 mg/l
+# I-II:    <= 50 mg/l
+# II:    <=100 mg/l
+# 
+# 
+# Sulfat:
+#   Güteklasse
+# I:    <= 25 mg/l
+# I-II:    <= 50 mg/l
+# II:    <=100 mg/l
+# 
+# BSB5
+# Grenzwerte: Fliessgewässer: 1-3 mg/l bzw. 2-4 mg/l biologisch gereinigtes Wasser < 30 mg/l; Der obere Grenzwert liegt in Deutschland bei 40 mg/l.
 
 
 ### Resterampe
