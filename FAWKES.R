@@ -371,6 +371,349 @@ for (m in 1: length(variable_list)){
 
 }
 
+### ecoregion based data
+
+tmp<-read.table("Europe_wide_analysis/waterbase_all_ecor.txt", header=TRUE, sep=";", quote="\"")
+classes <- sapply(tmp, class)
+classes["FID"]<-"num.with.commas" # more columns will be needed to be changed
+waterbase_all_ecor<-read.table("Europe_wide_analysis/waterbase_all_ecor.txt", header=TRUE, sep=";", quote="\"", colClasses=classes)
+### ATTENTION! # for some weired reason, we need to add 1 to the FIDs otherwise its a complete mismatch - *!*&%$ YOU ArcGIS!
+waterbase_all_ecor$FID<-(waterbase_all_ecor$FID+1) 
+names(waterbase_all_ecor)[4:58]<-names(waterbase_maxyear_snapped)[3:57]
+
+
+# read non-Strahler based tables
+setwd("Europe_wide_analysis/")
+slipway_all<-read.tables(c("slipway_all.txt"))
+colnames(slipway_all)[3]<-"FID"
+waterworks_all<-read.tables(c("waterworks_all.txt"))
+colnames(waterworks_all)[3]<-"FID"
+watermills_all<-read.tables(c("watermills_all.txt"))
+colnames(watermills_all)[3]<-"FID"
+marinas_all<-read.tables(c("marinas_all.txt"))
+colnames(marinas_all)[3]<-"FID"
+fishing_all<-read.tables(c("fishing_all.txt"))
+colnames(fishing_all)[3]<-"FID"
+setwd("..")
+
+# merge everything according to FID
+slipway_waterbase_all_ecor<-merge(slipway_all,waterbase_all_ecor,by="FID")
+watermills_waterbase_all_ecor<-merge(watermills_all,waterbase_all_ecor,by="FID")
+marinas_waterbase_all_ecor<-merge(marinas_all,waterbase_all_ecor,by="FID")
+fishing_waterbase_all_ecor<-merge(fishing_all,waterbase_all_ecor,by="FID")
+
+# something might be broken belwo
+
+# read Strahler based tables
+setwd("Europe_wide_analysis/")
+slipway_strahler<-read.tables(c("slipway_s1.txt","slipway_s2.txt","slipway_s3.txt","slipway_s4.txt","slipway_s5.txt","slipway_s6.txt"))
+colnames(slipway_strahler)[3]<-"FID"
+#waterworks_strahler<-read.tables(c("waterworks_s1.txt","waterworks_s2.txt","waterworks_s3.txt","waterworks_s4.txt","waterworks_s5.txt","waterworks_s6.txt"))
+watermills_strahler<-read.tables(c("watermills_s1.txt","watermills_s2.txt","watermills_s3.txt","watermills_s4.txt","watermills_s5.txt","watermills_s6.txt"))
+colnames(watermills_strahler)[3]<-"FID"
+marinas_strahler<-read.tables(c("marinas_s1.txt","marinas_s2.txt","marinas_s3.txt","marinas_s4.txt","marinas_s5.txt","marinas_s6.txt"))
+colnames(marinas_strahler)[3]<-"FID"
+fishing_strahler<-read.tables(c("fishing_s1.txt","fishing_s2.txt","fishing_s3.txt","fishing_s4.txt","fishing_s5.txt","fishing_s6.txt"))
+colnames(fishing_strahler)[3]<-"FID"
+setwd("..")
+
+# merge everything according to FID
+slipway_waterbase_strahler_ecor<-merge(slipway_strahler,waterbase_all_ecor,by="FID")
+watermills_waterbase_strahler_ecor<-merge(watermills_strahler,waterbase_all_ecor,by="FID")
+marinas_waterbase_strahler_ecor<-merge(marinas_strahler,waterbase_all_ecor,by="FID")
+fishing_waterbase_strahler_ecor<-merge(fishing_strahler,waterbase_all_ecor,by="FID")
+
+# histograms for Strahler based data
+
+strahler_list<-c("slipway_waterbase_strahler_ecor","watermills_waterbase_strahler_ecor", "marinas_waterbase_strahler_ecor","fishing_waterbase_strahler_ecor")
+strahler_list_names<-c("OSM: Slipways","OSM: Watermills", "OSM: Marinas","OSM: Fishing")
+## ATTENTION: somehow Nitrate and Nitrite are all 0, but in the original files there are values. presumably these have been lost in ArcGIS???
+variable_list<-c("EQR_Phytobenthos_G_MeanValueEQR","EQR_Phytobenthos_E_MeanValueEQR","EQR_Invertebrate_MeanValueEQR","Nutrients_Total_Nitrogen_MaxYear_Mean","Nutrients_Total_Phosphorous_MaxYear_Mean")
+EQR_status_variable_list<-c("EQR_Phytobenthos_G_DeterminandStatusClass","EQR_Phytobenthos_E_DeterminandStatusClass","EQR_Invertebrate_DeterminandStatusClass")
+distance_list<-c(15000)
+threshold_list<-c(0.6,0.6,0.6,3,0.1)
+
+par(mfrow = c(1, 1), pty = "s")
+
+results_table<-data.frame(poi_name=character(),variable=character(),distance=integer(),threshold=numeric(),good_no=numeric(),bad_no=numeric(),good_pc=numeric(),bad_pc=numeric(),stringsAsFactors=FALSE)
+
+for (m in 1: length(variable_list)){
+  tmp_m<-threshold_list[m]
+  tmp_mn<-variable_list[m] 
+  
+  # for (l in 1 : length(strahler_list)){
+  #   tmp<-get(strahler_list[[l]])
+  # hist(tmp$Nutrients_Total_Nitrogen_MaxYear_Mean[tmp$Nutrients_Total_Nitrogen_MaxYear_Mean>=0][tmp$Total_Length<=10000], breaks=20, main=paste(strahler_list_names[l]))
+  # abline(v=3, col="red")
+  # 
+  # mtext(sum(tmp$Nutrients_Total_Nitrogen_MaxYear_Mean>=0&tmp$Nutrients_Total_Nitrogen_MaxYear_Mean<=3&tmp$Total_Length<=10000), side=3,line=-1.5, at=par("usr")[1]+0.7*diff(par("usr")[1:2]), cex=1.2)
+  # mtext(sum(tmp$Nutrients_Total_Nitrogen_MaxYear_Mean>=3&tmp$Total_Length<=10000), side=3,line=-1.5, at=par("usr")[1]+0.8*diff(par("usr")[1:2]), cex=1.2)
+  # mtext("10000m")
+  # }
+  
+  for (k in 1: length (distance_list)){
+    tmp_k<-distance_list[k]
+    
+    for (l in 1 : length(strahler_list)){
+      tmp<-get(strahler_list[[l]])
+      hist(tmp[,tmp_mn][tmp[,tmp_mn]>=0][tmp$Total_Length<=tmp_k], breaks=20, main=paste(strahler_list_names[l], sep=" "), xlab=tmp_mn)
+      abline(v=tmp_m, col="red")
+      no_good<-sum(tmp[,tmp_mn]>=0&tmp[,tmp_mn]<=tmp_m&tmp$Total_Length<=tmp_k)
+      no_bad<-sum(tmp[,tmp_mn]>=tmp_m&tmp$Total_Length<=tmp_k)
+      all<-no_good+no_bad
+      percent_good<-round((sum(tmp[,tmp_mn]>=0&tmp[,tmp_mn]<=tmp_m&tmp$Total_Length<=tmp_k))/all*100)
+      percent_bad<-round((sum(tmp[,tmp_mn]>=tmp_m&tmp$Total_Length<=tmp_k))/all*100)
+      mtext(no_good, side=3,line=-1.5, at=par("usr")[1]+0.7*diff(par("usr")[1:2]), cex=1.2)
+      mtext(no_bad, side=3,line=-1.5, at=par("usr")[1]+0.8*diff(par("usr")[1:2]), cex=1.2)
+      mtext(percent_good, side=3,line=-2.5, at=par("usr")[1]+0.7*diff(par("usr")[1:2]), cex=1.2)
+      mtext(percent_bad, side=3,line=-2.5, at=par("usr")[1]+0.8*diff(par("usr")[1:2]), cex=1.2)
+      
+      mtext(tmp_k)
+      results_table_tmp<-data.frame(poi_name=character(),variable=character(),distance=integer(),threshold=numeric(),good_no=numeric(),bad_no=numeric(),good_pc=numeric(),bad_pc=numeric(),stringsAsFactors=FALSE)
+      results_table_tmp[1,]<-c(strahler_list_names[[l]],tmp_mn,tmp_k,tmp_m,no_good,no_bad,percent_good,percent_bad)
+      results_table<-rbind(results_table,results_table_tmp)
+    }
+    
+  }
+  
+}
+
+### Mann Whitney U test
+
+ecoregions<-unique(waterbase_all_ecor$NAME)
+
+
+### slipways:
+for (l in 1 : length(ecoregions)){
+
+  
+  waterbase_sub<-subset(waterbase_all_ecor, waterbase_all_ecor$NAME==paste(ecoregions[l]))
+  slipway_sub<-subset(slipway_waterbase_all_ecor, slipway_waterbase_all_ecor$NAME==paste(ecoregions[l]))
+
+  for (x in 1: nrow(slipway_sub)){
+    waterbase_sub<-waterbase_sub[waterbase_sub$FID!= paste(slipway_sub$FID[x]),]
+  }
+  
+  if (nrow(slipway_sub)>10){
+  slipway_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-slipway_sub$Nutrients_Total_Nitrogen_MaxYear_Mean
+  slipway_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-cbind(slipway_sub_Nutrients_Total_Nitrogen_MaxYear_Mean,rep("slipway"))
+  
+  waterbase_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-waterbase_sub$Nutrients_Total_Nitrogen_MaxYear_Mean
+  waterbase_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-cbind(waterbase_sub_Nutrients_Total_Nitrogen_MaxYear_Mean,rep("all"))
+  
+  slipway_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-rbind(as.numeric(slipway_sub_Nutrients_Total_Nitrogen_MaxYear_Mean),waterbase_sub_Nutrients_Total_Nitrogen_MaxYear_Mean)
+  slipway_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-as.data.frame(slipway_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean)
+  names(slipway_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean)<-c("value","group")
+  
+  print(l)
+  print((ecoregions[l]))
+  print(wilcox.test(as.numeric(slipway_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean$value)~slipway_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean$group) )
+  
+  }
+}  
+
+#all:
+
+waterbase_sub<-waterbase_all_ecor
+slipway_sub<-slipway_waterbase_all_ecor
+
+for (x in 1: nrow(slipway_sub)){
+  waterbase_sub<-waterbase_sub[waterbase_sub$FID!= paste(slipway_sub$FID[x]),]
+}
+
+if (nrow(slipway_sub)>10){
+  slipway_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-slipway_sub$Nutrients_Total_Nitrogen_MaxYear_Mean
+  slipway_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-cbind(slipway_sub_Nutrients_Total_Nitrogen_MaxYear_Mean,rep("slipway"))
+  
+  waterbase_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-waterbase_sub$Nutrients_Total_Nitrogen_MaxYear_Mean
+  waterbase_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-cbind(waterbase_sub_Nutrients_Total_Nitrogen_MaxYear_Mean,rep("all"))
+  
+  slipway_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-rbind(as.numeric(slipway_sub_Nutrients_Total_Nitrogen_MaxYear_Mean),waterbase_sub_Nutrients_Total_Nitrogen_MaxYear_Mean)
+  slipway_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-as.data.frame(slipway_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean)
+  names(slipway_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean)<-c("value","group")
+  
+  print("slipway all")
+    print(wilcox.test(as.numeric(slipway_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean$value)~slipway_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean$group) )
+}  
+
+### watermillss:
+for (l in 1 : length(ecoregions)){
+  
+  
+  waterbase_sub<-subset(waterbase_all_ecor, waterbase_all_ecor$NAME==paste(ecoregions[l]))
+  watermills_sub<-subset(watermills_waterbase_all_ecor, watermills_waterbase_all_ecor$NAME==paste(ecoregions[l]))
+  
+  for (x in 1: nrow(watermills_sub)){
+    waterbase_sub<-waterbase_sub[waterbase_sub$FID!= paste(watermills_sub$FID[x]),]
+  }
+  
+  if (nrow(watermills_sub)>10){
+    watermills_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-watermills_sub$Nutrients_Total_Nitrogen_MaxYear_Mean
+    watermills_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-cbind(watermills_sub_Nutrients_Total_Nitrogen_MaxYear_Mean,rep("watermills"))
+    
+    waterbase_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-waterbase_sub$Nutrients_Total_Nitrogen_MaxYear_Mean
+    waterbase_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-cbind(waterbase_sub_Nutrients_Total_Nitrogen_MaxYear_Mean,rep("all"))
+    
+    watermills_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-rbind(as.numeric(watermills_sub_Nutrients_Total_Nitrogen_MaxYear_Mean),waterbase_sub_Nutrients_Total_Nitrogen_MaxYear_Mean)
+    watermills_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-as.data.frame(watermills_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean)
+    names(watermills_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean)<-c("value","group")
+    
+    print(l)
+    print((ecoregions[l]))
+    print(wilcox.test(as.numeric(watermills_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean$value)~watermills_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean$group) )
+    
+  }
+} 
+### watermillss all:
+waterbase_sub<-waterbase_all_ecor
+watermills_sub<-watermills_waterbase_all_ecor
+
+for (x in 1: nrow(watermills_sub)){
+  waterbase_sub<-waterbase_sub[waterbase_sub$FID!= paste(watermills_sub$FID[x]),]
+}
+
+if (nrow(watermills_sub)>10){
+  watermills_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-watermills_sub$Nutrients_Total_Nitrogen_MaxYear_Mean
+  watermills_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-cbind(watermills_sub_Nutrients_Total_Nitrogen_MaxYear_Mean,rep("watermills"))
+  
+  waterbase_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-waterbase_sub$Nutrients_Total_Nitrogen_MaxYear_Mean
+  waterbase_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-cbind(waterbase_sub_Nutrients_Total_Nitrogen_MaxYear_Mean,rep("all"))
+  
+  watermills_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-rbind(as.numeric(watermills_sub_Nutrients_Total_Nitrogen_MaxYear_Mean),waterbase_sub_Nutrients_Total_Nitrogen_MaxYear_Mean)
+  watermills_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-as.data.frame(watermills_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean)
+  names(watermills_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean)<-c("value","group")
+  
+  print("watermills all")
+  print(wilcox.test(as.numeric(watermills_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean$value)~watermills_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean$group) )
+}
+
+### marinass:
+for (l in 1 : length(ecoregions)){
+  
+  
+  waterbase_sub<-subset(waterbase_all_ecor, waterbase_all_ecor$NAME==paste(ecoregions[l]))
+  marinas_sub<-subset(marinas_waterbase_all_ecor, marinas_waterbase_all_ecor$NAME==paste(ecoregions[l]))
+  
+  for (x in 1: nrow(marinas_sub)){
+    waterbase_sub<-waterbase_sub[waterbase_sub$FID!= paste(marinas_sub$FID[x]),]
+  }
+  
+  if (nrow(marinas_sub)>10){
+    marinas_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-marinas_sub$Nutrients_Total_Nitrogen_MaxYear_Mean
+    marinas_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-cbind(marinas_sub_Nutrients_Total_Nitrogen_MaxYear_Mean,rep("marinas"))
+    
+    waterbase_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-waterbase_sub$Nutrients_Total_Nitrogen_MaxYear_Mean
+    waterbase_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-cbind(waterbase_sub_Nutrients_Total_Nitrogen_MaxYear_Mean,rep("all"))
+    
+    marinas_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-rbind(as.numeric(marinas_sub_Nutrients_Total_Nitrogen_MaxYear_Mean),waterbase_sub_Nutrients_Total_Nitrogen_MaxYear_Mean)
+    marinas_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-as.data.frame(marinas_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean)
+    names(marinas_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean)<-c("value","group")
+    
+    print(l)
+    print((ecoregions[l]))
+    print(wilcox.test(as.numeric(marinas_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean$value)~marinas_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean$group) )
+    
+  }
+}  
+
+### marinass all:
+waterbase_sub<-waterbase_all_ecor
+marinas_sub<-marinas_waterbase_all_ecor
+
+for (x in 1: nrow(marinas_sub)){
+  waterbase_sub<-waterbase_sub[waterbase_sub$FID!= paste(marinas_sub$FID[x]),]
+}
+
+if (nrow(marinas_sub)>10){
+  marinas_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-marinas_sub$Nutrients_Total_Nitrogen_MaxYear_Mean
+  marinas_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-cbind(marinas_sub_Nutrients_Total_Nitrogen_MaxYear_Mean,rep("marinas"))
+  
+  waterbase_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-waterbase_sub$Nutrients_Total_Nitrogen_MaxYear_Mean
+  waterbase_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-cbind(waterbase_sub_Nutrients_Total_Nitrogen_MaxYear_Mean,rep("all"))
+  
+  marinas_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-rbind(as.numeric(marinas_sub_Nutrients_Total_Nitrogen_MaxYear_Mean),waterbase_sub_Nutrients_Total_Nitrogen_MaxYear_Mean)
+  marinas_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-as.data.frame(marinas_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean)
+  names(marinas_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean)<-c("value","group")
+  
+  print("marinas all")
+  print(wilcox.test(as.numeric(marinas_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean$value)~marinas_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean$group) )
+  
+}
+
+
+### fishings:
+for (l in 1 : length(ecoregions)){
+  
+  
+  waterbase_sub<-subset(waterbase_all_ecor, waterbase_all_ecor$NAME==paste(ecoregions[l]))
+  fishing_sub<-subset(fishing_waterbase_all_ecor, fishing_waterbase_all_ecor$NAME==paste(ecoregions[l]))
+  
+  
+  for (x in 1: nrow(fishing_sub)){
+    waterbase_sub<-waterbase_sub[waterbase_sub$FID!= paste(fishing_sub$FID[x]),]
+  }
+  
+  if (nrow(fishing_sub)>10){
+    fishing_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-fishing_sub$Nutrients_Total_Nitrogen_MaxYear_Mean
+    fishing_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-cbind(fishing_sub_Nutrients_Total_Nitrogen_MaxYear_Mean,rep("fishing"))
+    
+    waterbase_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-waterbase_sub$Nutrients_Total_Nitrogen_MaxYear_Mean
+    waterbase_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-cbind(waterbase_sub_Nutrients_Total_Nitrogen_MaxYear_Mean,rep("all"))
+    
+    fishing_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-rbind(as.numeric(fishing_sub_Nutrients_Total_Nitrogen_MaxYear_Mean),waterbase_sub_Nutrients_Total_Nitrogen_MaxYear_Mean)
+    fishing_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-as.data.frame(fishing_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean)
+    names(fishing_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean)<-c("value","group")
+    
+    print(l)
+    print((ecoregions[l]))
+    print(wilcox.test(as.numeric(fishing_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean$value)~fishing_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean$group) )
+    
+  }
+}  
+
+### fishings all:
+waterbase_sub<-waterbase_all_ecor
+fishing_sub<-fishing_waterbase_all_ecor
+
+
+for (x in 1: nrow(fishing_sub)){
+  waterbase_sub<-waterbase_sub[waterbase_sub$FID!= paste(fishing_sub$FID[x]),]
+}
+
+if (nrow(fishing_sub)>10){
+  fishing_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-fishing_sub$Nutrients_Total_Nitrogen_MaxYear_Mean
+  fishing_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-cbind(fishing_sub_Nutrients_Total_Nitrogen_MaxYear_Mean,rep("fishing"))
+  
+  waterbase_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-waterbase_sub$Nutrients_Total_Nitrogen_MaxYear_Mean
+  waterbase_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-cbind(waterbase_sub_Nutrients_Total_Nitrogen_MaxYear_Mean,rep("all"))
+  
+  fishing_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-rbind(as.numeric(fishing_sub_Nutrients_Total_Nitrogen_MaxYear_Mean),waterbase_sub_Nutrients_Total_Nitrogen_MaxYear_Mean)
+  fishing_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-as.data.frame(fishing_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean)
+  names(fishing_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean)<-c("value","group")
+  
+  print("fishing all")
+  print(wilcox.test(as.numeric(fishing_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean$value)~fishing_all_sub_Nutrients_Total_Nitrogen_MaxYear_Mean$group) )
+  
+}
+
+
+### MannWhitney U with Strahler
+
+  
+slipway_waterbase_strahler_ecor_Nutrients_Total_Nitrogen_MaxYear_Mean<-slipway_waterbase_strahler_ecor$Nutrients_Total_Nitrogen_MaxYear_Mean
+slipway_waterbase_strahler_ecor_Nutrients_Total_Nitrogen_MaxYear_Mean<-cbind(slipway_waterbase_strahler_ecor_Nutrients_Total_Nitrogen_MaxYear_Mean,rep("slipway"))
+
+waterbase_all_ecor_Nutrients_Total_Nitrogen_MaxYear_Mean<-waterbase_all_ecor$Nutrients_Total_Nitrogen_MaxYear_Mean
+waterbase_all_ecor_Nutrients_Total_Nitrogen_MaxYear_Mean<-cbind(waterbase_all_ecor_Nutrients_Total_Nitrogen_MaxYear_Mean,rep("all"))
+
+slipway_all_Nutrients_Total_Nitrogen_MaxYear_Mean<-rbind(as.numeric(slipway_waterbase_strahler_ecor_Nutrients_Total_Nitrogen_MaxYear_Mean),waterbase_all_ecor_Nutrients_Total_Nitrogen_MaxYear_Mean)
+slipway_all_Nutrients_Total_Nitrogen_MaxYear_Mean<-as.data.frame(slipway_all_Nutrients_Total_Nitrogen_MaxYear_Mean)
+names(slipway_all_Nutrients_Total_Nitrogen_MaxYear_Mean)<-c("value","group")
+
+wilcox.test(as.numeric(slipway_all_Nutrients_Total_Nitrogen_MaxYear_Mean$value)~slipway_all_Nutrients_Total_Nitrogen_MaxYear_Mean$group) 
+
+}
+
 pois<-unique(results_table$poi_name)
 
 for (p in 1: length (unique(results_table$poi_name)){
