@@ -373,59 +373,118 @@ for (m in 1: length(variable_list)){
 
 ### ecoregion based data
 
+
+### waterbase_s1_ecor$FID_waterb + 1 = fishing_s1$FacilityID
+
+
+#define new class for importing numbers containing commas that will be automatically removed
+setAs("character", "num.with.commas", function(from) as.numeric(gsub(",", "", from) ) )
+
 tmp<-read.table("Europe_wide_analysis/waterbase_all_ecor.txt", header=TRUE, sep=";", quote="\"")
 classes <- sapply(tmp, class)
-classes["FID"]<-"num.with.commas" # more columns will be needed to be changed
+classes["FID_waterb"]<-"num.with.commas" # more columns will be needed to be changed
 waterbase_all_ecor<-read.table("Europe_wide_analysis/waterbase_all_ecor.txt", header=TRUE, sep=";", quote="\"", colClasses=classes)
-### ATTENTION! # for some weired reason, we need to add 1 to the FIDs otherwise its a complete mismatch - *!*&%$ YOU ArcGIS!
-waterbase_all_ecor$FID<-(waterbase_all_ecor$FID+1) 
+waterbase_s1_ecor<-read.table("Europe_wide_analysis/waterbase_s1_ecor.txt", header=TRUE, sep=";", quote="\"", colClasses=classes)
+waterbase_s2_ecor<-read.table("Europe_wide_analysis/waterbase_s2_ecor.txt", header=TRUE, sep=";", quote="\"", colClasses=classes)
+waterbase_s3_ecor<-read.table("Europe_wide_analysis/waterbase_s3_ecor.txt", header=TRUE, sep=";", quote="\"", colClasses=classes)
+waterbase_s4_ecor<-read.table("Europe_wide_analysis/waterbase_s4_ecor.txt", header=TRUE, sep=";", quote="\"", colClasses=classes)
+waterbase_s5_ecor<-read.table("Europe_wide_analysis/waterbase_s5_ecor.txt", header=TRUE, sep=";", quote="\"", colClasses=classes)
+waterbase_s6_ecor<-read.table("Europe_wide_analysis/waterbase_s6_ecor.txt", header=TRUE, sep=";", quote="\"", colClasses=classes)
+
+### ATTENTION! # for some weired reason, we need to add 1 to the FID_waterb otherwise its a complete mismatch - *!*&%$ YOU ArcGIS!
+waterbase_all_ecor$FID_waterb<-(waterbase_all_ecor$FID_waterb+1) 
 names(waterbase_all_ecor)[4:58]<-names(waterbase_maxyear_snapped)[3:57]
+waterbase_s1_ecor$FID_waterb<-(waterbase_s1_ecor$FID_waterb+1) 
+names(waterbase_s1_ecor)[4:58]<-names(waterbase_maxyear_snapped)[3:57]
+waterbase_s2_ecor$FID_waterb<-(waterbase_s2_ecor$FID_waterb+1) 
+names(waterbase_s2_ecor)[4:58]<-names(waterbase_maxyear_snapped)[3:57]
+waterbase_s3_ecor$FID_waterb<-(waterbase_s3_ecor$FID_waterb+1) 
+names(waterbase_s3_ecor)[4:58]<-names(waterbase_maxyear_snapped)[3:57]
+waterbase_s4_ecor$FID_waterb<-(waterbase_s4_ecor$FID_waterb+1) 
+names(waterbase_s4_ecor)[4:58]<-names(waterbase_maxyear_snapped)[3:57]
+waterbase_s5_ecor$FID_waterb<-(waterbase_s5_ecor$FID_waterb+1) 
+names(waterbase_s5_ecor)[4:58]<-names(waterbase_maxyear_snapped)[3:57]
+waterbase_s6_ecor$FID_waterb<-(waterbase_s6_ecor$FID_waterb+1) 
+names(waterbase_s6_ecor)[4:58]<-names(waterbase_maxyear_snapped)[3:57]
 
+waterbase_all_strahler_ecor<-rbind(waterbase_s1_ecor,waterbase_s2_ecor,waterbase_s3_ecor,waterbase_s4_ecor,waterbase_s5_ecor,waterbase_s6_ecor)
 
+### must check if colums for IDs are corretcly selected
 # read non-Strahler based tables
-setwd("Europe_wide_analysis/")
-slipway_all<-read.tables(c("slipway_all.txt"))
-colnames(slipway_all)[3]<-"FID"
-waterworks_all<-read.tables(c("waterworks_all.txt"))
-colnames(waterworks_all)[3]<-"FID"
-watermills_all<-read.tables(c("watermills_all.txt"))
-colnames(watermills_all)[3]<-"FID"
-marinas_all<-read.tables(c("marinas_all.txt"))
-colnames(marinas_all)[3]<-"FID"
-fishing_all<-read.tables(c("fishing_all.txt"))
-colnames(fishing_all)[3]<-"FID"
-setwd("..")
-
-# merge everything according to FID
-slipway_waterbase_all_ecor<-merge(slipway_all,waterbase_all_ecor,by="FID")
-watermills_waterbase_all_ecor<-merge(watermills_all,waterbase_all_ecor,by="FID")
-marinas_waterbase_all_ecor<-merge(marinas_all,waterbase_all_ecor,by="FID")
-fishing_waterbase_all_ecor<-merge(fishing_all,waterbase_all_ecor,by="FID")
-
-# something might be broken belwo
+# setwd("Europe_wide_analysis/")
+# slipway_all<-read.tables(c("slipway_all.txt"))
+# colnames(slipway_all)[3]<-"FID"
+# waterworks_all<-read.tables(c("waterworks_all.txt"))
+# colnames(waterworks_all)[3]<-"FID"
+# watermills_all<-read.tables(c("watermills_all.txt"))
+# colnames(watermills_all)[3]<-"FID"
+# marinas_all<-read.tables(c("marinas_all.txt"))
+# colnames(marinas_all)[3]<-"FID"
+# fishing_all<-read.tables(c("fishing_all.txt"))
+# colnames(fishing_all)[3]<-"FID"
+# setwd("..")
+# 
+# # merge everything according to FID
+# slipway_waterbase_all_ecor<-merge(slipway_all,waterbase_all_ecor,by="FID")
+# watermills_waterbase_all_ecor<-merge(watermills_all,waterbase_all_ecor,by="FID")
+# marinas_waterbase_all_ecor<-merge(marinas_all,waterbase_all_ecor,by="FID")
+# fishing_waterbase_all_ecor<-merge(fishing_all,waterbase_all_ecor,by="FID")
 
 # read Strahler based tables
-setwd("Europe_wide_analysis/")
-slipway_strahler<-read.tables(c("slipway_s1.txt","slipway_s2.txt","slipway_s3.txt","slipway_s4.txt","slipway_s5.txt","slipway_s6.txt"))
-colnames(slipway_strahler)[3]<-"FID"
-#waterworks_strahler<-read.tables(c("waterworks_s1.txt","waterworks_s2.txt","waterworks_s3.txt","waterworks_s4.txt","waterworks_s5.txt","waterworks_s6.txt"))
-watermills_strahler<-read.tables(c("watermills_s1.txt","watermills_s2.txt","watermills_s3.txt","watermills_s4.txt","watermills_s5.txt","watermills_s6.txt"))
-colnames(watermills_strahler)[3]<-"FID"
-marinas_strahler<-read.tables(c("marinas_s1.txt","marinas_s2.txt","marinas_s3.txt","marinas_s4.txt","marinas_s5.txt","marinas_s6.txt"))
-colnames(marinas_strahler)[3]<-"FID"
-fishing_strahler<-read.tables(c("fishing_s1.txt","fishing_s2.txt","fishing_s3.txt","fishing_s4.txt","fishing_s5.txt","fishing_s6.txt"))
-colnames(fishing_strahler)[3]<-"FID"
-setwd("..")
+# setwd("Europe_wide_analysis/")
+# slipway_strahler<-read.tables(c("slipway_s1.txt","slipway_s2.txt","slipway_s3.txt","slipway_s4.txt","slipway_s5.txt","slipway_s6.txt"))
+# colnames(slipway_strahler)[3]<-"FID_waterb"
+# #waterworks_strahler<-read.tables(c("waterworks_s1.txt","waterworks_s2.txt","waterworks_s3.txt","waterworks_s4.txt","waterworks_s5.txt","waterworks_s6.txt"))
+# watermills_strahler<-read.tables(c("watermills_s1.txt","watermills_s2.txt","watermills_s3.txt","watermills_s4.txt","watermills_s5.txt","watermills_s6.txt"))
+# colnames(watermills_strahler)[3]<-"FID_waterb"
+# marinas_strahler<-read.tables(c("marinas_s1.txt","marinas_s2.txt","marinas_s3.txt","marinas_s4.txt","marinas_s5.txt","marinas_s6.txt"))
+# colnames(marinas_strahler)[3]<-"FID_waterb"
+# fishing_strahler<-read.tables(c("fishing_s1.txt","fishing_s2.txt","fishing_s3.txt","fishing_s4.txt","fishing_s5.txt","fishing_s6.txt"))
+# colnames(fishing_strahler)[3]<-"FID_waterb"
+# setwd("..")
+
+
+tmp<-read.table("Europe_wide_analysis/slipway_all.txt", header=TRUE, sep=";", quote="\"")
+classes <- sapply(tmp, class)
+classes["FacilityID"]<-"num.with.commas" # more columns will be needed to be changed
+
+slipway_all<-read.table("Europe_wide_analysis/slipway_all.txt", header=TRUE, sep=";", quote="\"", colClasses=classes)
+slipway_s1<-read.table("Europe_wide_analysis/slipway_s1.txt", header=TRUE, sep=";", quote="\"", colClasses=classes)
+slipway_s2<-read.table("Europe_wide_analysis/slipway_s2.txt", header=TRUE, sep=";", quote="\"", colClasses=classes)
+slipway_s3<-read.table("Europe_wide_analysis/slipway_s3.txt", header=TRUE, sep=";", quote="\"", colClasses=classes)
+slipway_s4<-read.table("Europe_wide_analysis/slipway_s4.txt", header=TRUE, sep=";", quote="\"", colClasses=classes)
+slipway_s5<-read.table("Europe_wide_analysis/slipway_s5.txt", header=TRUE, sep=";", quote="\"", colClasses=classes)
+slipway_s6<-read.table("Europe_wide_analysis/slipway_s6.txt", header=TRUE, sep=";", quote="\"", colClasses=classes)
+
+colnames(slipway_all)[2]<-"FID_waterb"
+colnames(slipway_s1)[2]<-"FID_waterb"
+colnames(slipway_s2)[2]<-"FID_waterb"
+colnames(slipway_s3)[2]<-"FID_waterb"
+colnames(slipway_s4)[2]<-"FID_waterb"
+colnames(slipway_s5)[2]<-"FID_waterb" 
+colnames(slipway_s6)[2]<-"FID_waterb"
+
 
 # merge everything according to FID
-slipway_waterbase_strahler_ecor<-merge(slipway_strahler,waterbase_all_ecor,by="FID")
-watermills_waterbase_strahler_ecor<-merge(watermills_strahler,waterbase_all_ecor,by="FID")
-marinas_waterbase_strahler_ecor<-merge(marinas_strahler,waterbase_all_ecor,by="FID")
-fishing_waterbase_strahler_ecor<-merge(fishing_strahler,waterbase_all_ecor,by="FID")
+slipway_waterbase_all_ecor<-merge(slipway_all,waterbase_all_ecor,by="FID_waterb")
+slipway_waterbase_s1_ecor<-merge(slipway_s1,waterbase_s1_ecor,by="FID_waterb")
+slipway_waterbase_s2_ecor<-merge(slipway_s2,waterbase_s2_ecor,by="FID_waterb")
+slipway_waterbase_s3_ecor<-merge(slipway_s3,waterbase_s3_ecor,by="FID_waterb")
+slipway_waterbase_s4_ecor<-merge(slipway_s4,waterbase_s4_ecor,by="FID_waterb")
+slipway_waterbase_s5_ecor<-merge(slipway_s5,waterbase_s5_ecor,by="FID_waterb")
+slipway_waterbase_s6_ecor<-merge(slipway_s6,waterbase_s6_ecor,by="FID_waterb")
+
+slipway_waterbase_strahler_ecor<-rbind(slipway_waterbase_s1_ecor,slipway_waterbase_s2_ecor,slipway_waterbase_s3_ecor,slipway_waterbase_s4_ecor,slipway_waterbase_s5_ecor,slipway_waterbase_s6_ecor)
+
+# 
+# 
+# watermills_waterbase_strahler_ecor<-merge(watermills_strahler,waterbase_all_ecor,by="FID")
+# marinas_waterbase_strahler_ecor<-merge(marinas_strahler,waterbase_all_ecor,by="FID")
+# fishing_waterbase_strahler_ecor<-merge(fishing_strahler,waterbase_all_ecor,by="FID")
 
 # histograms for Strahler based data
 
-strahler_list<-c("slipway_waterbase_strahler_ecor","watermills_waterbase_strahler_ecor", "marinas_waterbase_strahler_ecor","fishing_waterbase_strahler_ecor")
+strahler_list<-c("slipway_waterbase_strahler_ecor")#,"watermills_waterbase_strahler_ecor", "marinas_waterbase_strahler_ecor","fishing_waterbase_strahler_ecor")
 strahler_list_names<-c("OSM: Slipways","OSM: Watermills", "OSM: Marinas","OSM: Fishing")
 ## ATTENTION: somehow Nitrate and Nitrite are all 0, but in the original files there are values. presumably these have been lost in ArcGIS???
 variable_list<-c("EQR_Phytobenthos_G_MeanValueEQR","EQR_Phytobenthos_E_MeanValueEQR","EQR_Invertebrate_MeanValueEQR","Nutrients_Total_Nitrogen_MaxYear_Mean","Nutrients_Total_Phosphorous_MaxYear_Mean")
@@ -483,16 +542,16 @@ for (m in 1: length(variable_list)){
 ecoregions<-unique(waterbase_all_ecor$NAME)
 
 
-### slipways:
+### slipways strahler:
 for (l in 1 : length(ecoregions)){
 
   
-  waterbase_sub<-subset(waterbase_all_ecor, waterbase_all_ecor$NAME==paste(ecoregions[l]))
-  slipway_sub<-subset(slipway_waterbase_all_ecor, slipway_waterbase_all_ecor$NAME==paste(ecoregions[l]))
+  waterbase_sub<-subset(waterbase_all_strahler_ecor, waterbase_all_strahler_ecor$NAME==paste(ecoregions[l]))
+  slipway_sub<-subset(slipway_waterbase_strahler_ecor, slipway_waterbase_strahler_ecor$NAME==paste(ecoregions[l]))
 
-  for (x in 1: nrow(slipway_sub)){
-    waterbase_sub<-waterbase_sub[waterbase_sub$FID!= paste(slipway_sub$FID[x]),]
-  }
+#   for (x in 1: nrow(slipway_sub)){
+#     waterbase_sub<-waterbase_sub[waterbase_sub$FID!= paste(slipway_sub$FID[x]),]
+#   }
   
   if (nrow(slipway_sub)>10){
   slipway_sub_Nutrients_Total_Nitrogen_MaxYear_Mean<-slipway_sub$Nutrients_Total_Nitrogen_MaxYear_Mean
