@@ -217,7 +217,7 @@ all_ecor_names<-c("OSM: Slipways", "OSM: Marinas", "OSM: Fishing")#,"watermills_
 for (x in 1: length(all_ecor_list) ){
   tmp_poi<-all_ecor_list[x]
   tmp_poi_data<-get(tmp_poi)
-  tmp_poi_data<-tmp_poi_data[tmp_poi_data$Total_Length<=15000,]
+  tmp_poi_data<-tmp_poi_data[tmp_poi_data$Total_Length<=1000,]
   
   for (y in 1: length(variable_list) ){
     tmp_var<-variable_list[y] 
@@ -284,7 +284,7 @@ all_ecor_list<-c("slipway_waterbase_all_ecor", "marinas_waterbase_all_ecor","fis
 for (x in 1: length(all_ecor_list) ){
   tmp_poi<-all_ecor_list[x]
   tmp_poi_data<-get(tmp_poi)
-  tmp_poi_data<-tmp_poi_data[tmp_poi_data$Total_Length<=15000,]
+  tmp_poi_data<-tmp_poi_data[tmp_poi_data$Total_Length<=1000,]
   
   for (y in 1: length(variable_list) ){
     tmp_var<-variable_list[y] 
@@ -363,7 +363,7 @@ for (x in 1: length(all_ecor_list) ){
 for (x in 1: length(strahler_ecor_list) ){
   tmp_poi<-strahler_ecor_list[x]
   tmp_poi_data<-get(tmp_poi)
-  tmp_poi_data<-tmp_poi_data[tmp_poi_data$Total_Length<=15000,]
+  tmp_poi_data<-tmp_poi_data[tmp_poi_data$Total_Length<=1000,]
   
   for (y in 1: length(variable_list) ){
     tmp_var<-variable_list[y] 
@@ -433,7 +433,7 @@ for (x in 1: length(strahler_ecor_list) ){
 for (x in 1: length(strahler_ecor_list) ){
  tmp_poi<-strahler_ecor_list[x]
  tmp_poi_data<-get(tmp_poi)
- tmp_poi_data<-tmp_poi_data[tmp_poi_data$Total_Length<=15000,]
+ tmp_poi_data<-tmp_poi_data[tmp_poi_data$Total_Length<=1000,]
  
 for (y in 1: length(variable_list) ){
  tmp_var<-variable_list[y] 
