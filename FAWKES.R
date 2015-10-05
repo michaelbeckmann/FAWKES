@@ -323,7 +323,8 @@ strahler_list_names<-c("OSM: Slipways","OSM: Watermills", "OSM: Marinas","OSM: F
 ## ATTENTION: somehow Nitrate and Nitrite are all 0, but in the original files there are values. presumably these have been lost in ArcGIS???
 variable_list<-c("EQR_Phytobenthos_G_MeanValueEQR","EQR_Phytobenthos_E_MeanValueEQR","EQR_Invertebrate_MeanValueEQR","Nutrients_Total_Nitrogen_MaxYear_Mean","Nutrients_Total_Phosphorous_MaxYear_Mean")
 EQR_status_variable_list<-c("EQR_Phytobenthos_G_DeterminandStatusClass","EQR_Phytobenthos_E_DeterminandStatusClass","EQR_Invertebrate_DeterminandStatusClass")
-distance_list<-c(500,1000,2000,3000,4000,5000,6000,7000,8000,9000,10000,11000,12000,13000,14000,15000)
+#distance_list<-c(500,1000,2000,3000,4000,5000,6000,7000,8000,9000,10000,11000,12000,13000,14000,15000)
+distance_list<-c(1000,15000)
 threshold_list<-c(0.6,0.6,0.6,3,0.1)
 
 par(mfrow = c(1, 1), pty = "s")
@@ -349,19 +350,31 @@ for (m in 1: length(variable_list)){
       
         for (l in 1 : length(strahler_list)){
           tmp<-get(strahler_list[[l]])
+          tmp2<-(waterbase_all)
+
+          png(paste("/tmp/",strahler_list[[l]],variable_list[m],distance_list[k],".png",sep="_"))
           hist(tmp[,tmp_mn][tmp[,tmp_mn]>=0][tmp$Total_Length<=tmp_k], breaks=20, main=paste(strahler_list_names[l], sep=" "), xlab=tmp_mn)
-          abline(v=tmp_m, col="red")
+         
+          
+          #hist(tmp2[,tmp_mn][tmp2[,tmp_mn]>=0], breaks=500, xlab="",add=TRUE,ylim=c(0,15000))
+          #abline(v=tmp_m, col="red")
           no_good<-sum(tmp[,tmp_mn]>=0&tmp[,tmp_mn]<=tmp_m&tmp$Total_Length<=tmp_k)
           no_bad<-sum(tmp[,tmp_mn]>=tmp_m&tmp$Total_Length<=tmp_k)
           all<-no_good+no_bad
           percent_good<-round((sum(tmp[,tmp_mn]>=0&tmp[,tmp_mn]<=tmp_m&tmp$Total_Length<=tmp_k))/all*100)
           percent_bad<-round((sum(tmp[,tmp_mn]>=tmp_m&tmp$Total_Length<=tmp_k))/all*100)
-          mtext(no_good, side=3,line=-1.5, at=par("usr")[1]+0.7*diff(par("usr")[1:2]), cex=1.2)
-          mtext(no_bad, side=3,line=-1.5, at=par("usr")[1]+0.8*diff(par("usr")[1:2]), cex=1.2)
-          mtext(percent_good, side=3,line=-2.5, at=par("usr")[1]+0.7*diff(par("usr")[1:2]), cex=1.2)
-          mtext(percent_bad, side=3,line=-2.5, at=par("usr")[1]+0.8*diff(par("usr")[1:2]), cex=1.2)
+          mtext(all, side=3,line=-1.5, at=par("usr")[1]+0.7*diff(par("usr")[1:2]), cex=1.2)
+         # mtext(no_good, side=3,line=-1.5, at=par("usr")[1]+0.7*diff(par("usr")[1:2]), cex=1.2)
+         # mtext(no_bad, side=3,line=-1.5, at=par("usr")[1]+0.8*diff(par("usr")[1:2]), cex=1.2)
+         # mtext(percent_good, side=3,line=-2.5, at=par("usr")[1]+0.7*diff(par("usr")[1:2]), cex=1.2)
+        #  mtext(percent_bad, side=3,line=-2.5, at=par("usr")[1]+0.8*diff(par("usr")[1:2]), cex=1.2)
           
           mtext(tmp_k)
+          dev.off()
+         
+           png(paste("/tmp/","waterbase_all",variable_list[m],".png",sep="_"))
+          hist(tmp2[,tmp_mn][tmp2[,tmp_mn]>=0&tmp2[,tmp_mn]], breaks=200,  xlab=tmp_mn, main="All Waterbase Stations", xlim=c(0,1.5))
+          dev.off()
            results_table_tmp<-data.frame(poi_name=character(),variable=character(),distance=integer(),threshold=numeric(),good_no=numeric(),bad_no=numeric(),good_pc=numeric(),bad_pc=numeric(),stringsAsFactors=FALSE)
            results_table_tmp[1,]<-c(strahler_list_names[[l]],tmp_mn,tmp_k,tmp_m,no_good,no_bad,percent_good,percent_bad)
            results_table<-rbind(results_table,results_table_tmp)

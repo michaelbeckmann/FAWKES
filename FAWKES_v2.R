@@ -14,6 +14,7 @@ library(pryr)
 
 
 ### waterbase_s1_ecor$FID_waterb + 1 = fishing_s1$FacilityID
+waterbase_maxyear_snapped<-read.csv("waterbase_maxyear_snapped.csv", header=TRUE )
 
 
 #define new class for importing numbers containing commas that will be automatically removed
@@ -201,10 +202,14 @@ marinas_waterbase_strahler_ecor<-rbind(marinas_waterbase_s1_ecor,marinas_waterba
 ### Mann Whitney U test
 
 ecoregions<-unique(waterbase_all_ecor$NAME)
+ecoregions<-ecoregions[c(1,16,17,8,9,14,15)]
 #ecoregions<-ecoregions[17] # just for GB
 strahler_ecor_list<-c("slipway_waterbase_strahler_ecor", "marinas_waterbase_strahler_ecor")#,"watermills_waterbase_strahler_ecor","fishing_waterbase_strahler_ecor")
 variable_list<-c("EQR_Phytobenthos_G_MeanValueEQR","EQR_Phytobenthos_E_MeanValueEQR","EQR_Invertebrate_MeanValueEQR","Nutrients_Total_Nitrogen_MaxYear_Mean","Nutrients_Total_Phosphorous_MaxYear_Mean")
 all_ecor_list<-c("slipway_waterbase_all_ecor", "marinas_waterbase_all_ecor")#,"watermills_waterbase_all_ecor","fishing_waterbase_all_ecor")
+
+variable_names<-c("EQR_Phytobenthos_G","EQR_Phytobenthos_E","EQR_Invertebrate","Total_Nitrogen","Total_Phosphorous")
+all_ecor_names<-c("OSM: Slipways", "OSM: Marinas", "OSM: Fishing")#,"watermills_waterbase_all_ecor","fishing_waterbase_all_ecor")
 
 
 ### Europe without starhler
@@ -212,7 +217,7 @@ all_ecor_list<-c("slipway_waterbase_all_ecor", "marinas_waterbase_all_ecor")#,"w
 for (x in 1: length(all_ecor_list) ){
   tmp_poi<-all_ecor_list[x]
   tmp_poi_data<-get(tmp_poi)
-  tmp_poi_data<-tmp_poi_data[tmp_poi_data$Total_Length<=1000,]
+  tmp_poi_data<-tmp_poi_data[tmp_poi_data$Total_Length<=15000,]
   
   for (y in 1: length(variable_list) ){
     tmp_var<-variable_list[y] 
@@ -226,29 +231,44 @@ for (x in 1: length(all_ecor_list) ){
     
     if (nrow(tmp_poi_sub)>10){
       tmp_poi_sub_tmp_var<-tmp_poi_sub[,tmp_var]
-      tmp_poi_sub_tmp_var<-cbind(tmp_poi_sub_tmp_var,rep("tmp_poi"))
+      tmp_poi_sub_tmp_var<-data.frame(tmp_poi_sub_tmp_var,rep("tmp_poi"))
+      names(tmp_poi_sub_tmp_var)<-c("value","group")
       
       waterbase_sub_tmp_var<-waterbase_sub[,tmp_var]
-      waterbase_sub_tmp_var<-cbind(waterbase_sub_tmp_var,rep("all"))
+      waterbase_sub_tmp_var<-data.frame(waterbase_sub_tmp_var,rep("all"))
+      names(waterbase_sub_tmp_var)<-c("value","group")
       
-      tmp_poi_all_sub_tmp_var<-rbind(as.numeric(tmp_poi_sub_tmp_var),waterbase_sub_tmp_var)
-      tmp_poi_all_sub_tmp_var<-as.data.frame(tmp_poi_all_sub_tmp_var)
-      names(tmp_poi_all_sub_tmp_var)<-c("value","group")
+      tmp_poi_all_sub_tmp_var<-rbind.data.frame(tmp_poi_sub_tmp_var,waterbase_sub_tmp_var)
+     
+      png(paste("/tmp/","EU without Strahler",all_ecor_names[x],variable_names[y],".png",sep="_"),width = 1760, height = 960, units = "px",pointsize=40)
+      par(mfrow = c(1, 4), pty = "s")
+      hist(as.numeric(tmp_poi_sub_tmp_var[,1][as.numeric(tmp_poi_sub_tmp_var[,1])>0]), main=paste(all_ecor_names[x]),xlab=variable_names[y]) 
+      mtext("EU without Strahler")
+      boxplot(tmp_poi_sub_tmp_var[,1][(tmp_poi_sub_tmp_var[,1])>0],outline=FALSE)
+      mtext(paste("n=", nrow(tmp_poi_sub)))
+      hist(as.numeric(waterbase_sub_tmp_var[,1][as.numeric(waterbase_sub_tmp_var[,1])>0]), main=paste("all waterbase stations"),xlab=variable_names[y]) 
+      mtext("EU without Strahler")
+      boxplot(waterbase_sub_tmp_var[,1][as.numeric(waterbase_sub_tmp_var[,1])>0],outline=FALSE)
+      dev.off()
       
+      result<-(wilcox.test(tmp_poi_all_sub_tmp_var$value[tmp_poi_all_sub_tmp_var$value>0]~tmp_poi_all_sub_tmp_var$group[tmp_poi_all_sub_tmp_var$value>0]) )
       
-      result<-(wilcox.test(as.numeric(tmp_poi_all_sub_tmp_var$value)~tmp_poi_all_sub_tmp_var$group) )
       
       if (is.na(result$p.value)){ 
-        print(paste("NA", all_ecor_list[x],variable_list[y],ecoregions[l]))
+        print(paste("NA", strahler_ecor_list[x],variable_list[y],ecoregions[l]))
       } else {
         if (result$p.value<0.1){
           #           print((ecoregions[l]))
-          #           print(all_ecor_list[x])
+          #           print(strahler_ecor_list[x])
           #           print(tmp_var<-variable_list[y])
           #           print(result)
-          print(paste(result$p.value, all_ecor_list[x],variable_list[y], "n=", nrow(tmp_poi_sub)))
+          if (median(tmp_poi_sub_tmp_var[,1][(tmp_poi_sub_tmp_var[,1])>0])>median(waterbase_sub_tmp_var[,1][as.numeric(waterbase_sub_tmp_var[,1])>0])){
+            print(paste(result$p.value, strahler_ecor_list[x],variable_list[y], "n=", nrow(tmp_poi_sub)))
+          } else {
+            print(paste("-",result$p.value, strahler_ecor_list[x],variable_list[y], "n=", nrow(tmp_poi_sub)))
+          }
         } else {
-          print(paste("NS", all_ecor_list[x],variable_list[y]))
+          print(paste("NS", strahler_ecor_list[x],variable_list[y]))
         }
       }
       
@@ -259,12 +279,12 @@ for (x in 1: length(all_ecor_list) ){
 
 ### - strahler + ecoregions
 
-all_ecor_list<-c("slipway_waterbase_all_ecor","watermills_waterbase_all_ecor", "marinas_waterbase_all_ecor","fishing_waterbase_all_ecor")
+all_ecor_list<-c("slipway_waterbase_all_ecor", "marinas_waterbase_all_ecor","fishing_waterbase_all_ecor")
 
 for (x in 1: length(all_ecor_list) ){
   tmp_poi<-all_ecor_list[x]
   tmp_poi_data<-get(tmp_poi)
-  tmp_poi_data<-tmp_poi_data[tmp_poi_data$Total_Length<=1000,]
+  tmp_poi_data<-tmp_poi_data[tmp_poi_data$Total_Length<=15000,]
   
   for (y in 1: length(variable_list) ){
     tmp_var<-variable_list[y] 
@@ -280,33 +300,59 @@ for (x in 1: length(all_ecor_list) ){
       
       if (nrow(tmp_poi_sub)>10){
         tmp_poi_sub_tmp_var<-tmp_poi_sub[,tmp_var]
-        tmp_poi_sub_tmp_var<-cbind(tmp_poi_sub_tmp_var,rep("tmp_poi"))
+        tmp_poi_sub_tmp_var<-data.frame(tmp_poi_sub_tmp_var,rep("tmp_poi"))
+        names(tmp_poi_sub_tmp_var)<-c("value","group")
         
         waterbase_sub_tmp_var<-waterbase_sub[,tmp_var]
-        waterbase_sub_tmp_var<-cbind(waterbase_sub_tmp_var,rep("all"))
+        waterbase_sub_tmp_var<-data.frame(waterbase_sub_tmp_var,rep("all"))
+        names(waterbase_sub_tmp_var)<-c("value","group")
         
-        tmp_poi_all_sub_tmp_var<-rbind(as.numeric(tmp_poi_sub_tmp_var),waterbase_sub_tmp_var)
-        tmp_poi_all_sub_tmp_var<-as.data.frame(tmp_poi_all_sub_tmp_var)
-        names(tmp_poi_all_sub_tmp_var)<-c("value","group")
+        tmp_poi_all_sub_tmp_var<-rbind.data.frame(tmp_poi_sub_tmp_var,waterbase_sub_tmp_var)
         
         
-        result<-(wilcox.test(as.numeric(tmp_poi_all_sub_tmp_var$value)~tmp_poi_all_sub_tmp_var$group) )
+        
+        
+
+        
+        if (length(unique(tmp_poi_all_sub_tmp_var$group[tmp_poi_all_sub_tmp_var$value>0]))==2){
+          result<-(wilcox.test(tmp_poi_all_sub_tmp_var$value[tmp_poi_all_sub_tmp_var$value>0]~tmp_poi_all_sub_tmp_var$group[tmp_poi_all_sub_tmp_var$value>0]) )
+        } else {
+          print(paste ("all zero",ecoregions[l]))
+          {next}
+        }  
+        
+        png(paste("/tmp/","Ecoregions without Strahler",ecoregions[l],all_ecor_names[x],variable_names[y],".png",sep="_"),width = 1760, height = 960, units = "px",pointsize=40)
+        par(mfrow = c(1, 4), pty = "s")
+        hist(as.numeric(tmp_poi_sub_tmp_var[,1]), main=paste(all_ecor_names[x]),xlab=variable_names[y]) 
+        mtext(paste(ecoregions[l],"without Strahler"))
+        boxplot(tmp_poi_sub_tmp_var[,1][(tmp_poi_sub_tmp_var[,1])>0],outline=FALSE)
+        mtext(paste("n=", nrow(tmp_poi_sub)))
+        hist(as.numeric(waterbase_sub_tmp_var[,1]), main=paste("all waterbase stations"),xlab=variable_names[y]) 
+        mtext(paste(ecoregions[l],"without Strahler"))
+        boxplot(waterbase_sub_tmp_var[,1][as.numeric(waterbase_sub_tmp_var[,1])>0],outline=FALSE)
+        dev.off()
         
         if (is.na(result$p.value)){ 
-          print(paste("NA", all_ecor_list[x],variable_list[y],ecoregions[l]))
+          print(paste("NA", all_ecor_names[x],variable_list[y],ecoregions[l]))
         } else {
           if (result$p.value<0.1){
             #           print((ecoregions[l]))
-            #           print(all_ecor_list[x])
+            #           print(strahler_ecor_list[x])
             #           print(tmp_var<-variable_list[y])
             #           print(result)
-            print(paste(result$p.value, all_ecor_list[x],variable_list[y],ecoregions[l], "n=", nrow(tmp_poi_sub)))
+            if (median(tmp_poi_sub_tmp_var[,1][(tmp_poi_sub_tmp_var[,1])>0])>median(waterbase_sub_tmp_var[,1][as.numeric(waterbase_sub_tmp_var[,1])>0])&(length(unique(tmp_poi_all_sub_tmp_var$group[tmp_poi_all_sub_tmp_var$value>0]))==2)){
+              print(paste(result$p.value,ecoregions[l], strahler_ecor_list[x],variable_list[y], "n=", nrow(tmp_poi_sub)))
+            } else {
+              print(paste("-",result$p.value, ecoregions[l], all_ecor_names[x],variable_list[y], "n=", nrow(tmp_poi_sub)))
+            }
+            
           } else {
-            print(paste("NS", all_ecor_list[x],variable_list[y],ecoregions[l]))
+            print(paste("NS", ecoregions[l],all_ecor_names[x],variable_list[y]))
           }
         }
         
-        
+      } else {
+        print(paste("less than 10 points", ecoregions[l],all_ecor_names[x],variable_list[y]))
       }
     }  
   }
@@ -317,7 +363,7 @@ for (x in 1: length(all_ecor_list) ){
 for (x in 1: length(strahler_ecor_list) ){
   tmp_poi<-strahler_ecor_list[x]
   tmp_poi_data<-get(tmp_poi)
-  tmp_poi_data<-tmp_poi_data[tmp_poi_data$Total_Length<=1000,]
+  tmp_poi_data<-tmp_poi_data[tmp_poi_data$Total_Length<=15000,]
   
   for (y in 1: length(variable_list) ){
     tmp_var<-variable_list[y] 
@@ -333,17 +379,30 @@ for (x in 1: length(strahler_ecor_list) ){
     
     if (nrow(tmp_poi_sub)>10){
       tmp_poi_sub_tmp_var<-tmp_poi_sub[,tmp_var]
-      tmp_poi_sub_tmp_var<-cbind(tmp_poi_sub_tmp_var,rep("tmp_poi"))
+      tmp_poi_sub_tmp_var<-data.frame(tmp_poi_sub_tmp_var,rep("tmp_poi"))
+      names(tmp_poi_sub_tmp_var)<-c("value","group")
       
       waterbase_sub_tmp_var<-waterbase_sub[,tmp_var]
-      waterbase_sub_tmp_var<-cbind(waterbase_sub_tmp_var,rep("all"))
+      waterbase_sub_tmp_var<-data.frame(waterbase_sub_tmp_var,rep("all"))
+      names(waterbase_sub_tmp_var)<-c("value","group")
       
-      tmp_poi_all_sub_tmp_var<-rbind(as.numeric(tmp_poi_sub_tmp_var),waterbase_sub_tmp_var)
-      tmp_poi_all_sub_tmp_var<-as.data.frame(tmp_poi_all_sub_tmp_var)
-      names(tmp_poi_all_sub_tmp_var)<-c("value","group")
+      tmp_poi_all_sub_tmp_var<-rbind.data.frame(tmp_poi_sub_tmp_var,waterbase_sub_tmp_var)
+      #tmp_poi_all_sub_tmp_var<-as.data.frame(tmp_poi_all_sub_tmp_var)
+      #names(tmp_poi_all_sub_tmp_var)<-c("value","group")
       
+      png(paste("/tmp/","EU with Strahler",all_ecor_names[x],variable_names[y],".png",sep="_"),width = 1760, height = 960, units = "px",pointsize=40)
+      par(mfrow = c(1, 4), pty = "s")
+      hist((tmp_poi_sub_tmp_var[,1][(tmp_poi_sub_tmp_var[,1])>0]), main=paste(all_ecor_names[x]),xlab=variable_names[y])
+      mtext(paste("Strahler"))
+      boxplot(tmp_poi_sub_tmp_var[,1][(tmp_poi_sub_tmp_var[,1])>0],outline=FALSE)
+      mtext(paste("n=", nrow(tmp_poi_sub)))
+      hist(as.numeric(waterbase_sub_tmp_var[,1][as.numeric(waterbase_sub_tmp_var[,1])>0]), main=paste("all waterbase stations"),xlab=variable_names[y]) 
+      mtext(paste("Strahler"))
+      boxplot(waterbase_sub_tmp_var[,1][as.numeric(waterbase_sub_tmp_var[,1])>0],outline=FALSE)
+      dev.off()
       
-      result<-(wilcox.test(as.numeric(tmp_poi_all_sub_tmp_var$value)~tmp_poi_all_sub_tmp_var$group) )
+      result<-(wilcox.test(tmp_poi_all_sub_tmp_var$value[tmp_poi_all_sub_tmp_var$value>0]~tmp_poi_all_sub_tmp_var$group[tmp_poi_all_sub_tmp_var$value>0]) )
+      #result<-(wilcox.test(as.numeric(as.character(tmp_poi_all_sub_tmp_var$value))[as.numeric(as.character(tmp_poi_all_sub_tmp_var$value))>0]~tmp_poi_all_sub_tmp_var$group[as.numeric(as.character(tmp_poi_all_sub_tmp_var$value))>0]) )
       
       if (is.na(result$p.value)){ 
         print(paste("NA", strahler_ecor_list[x],variable_list[y],ecoregions[l]))
@@ -353,7 +412,11 @@ for (x in 1: length(strahler_ecor_list) ){
           #           print(strahler_ecor_list[x])
           #           print(tmp_var<-variable_list[y])
           #           print(result)
+          if (median(tmp_poi_sub_tmp_var[,1][(tmp_poi_sub_tmp_var[,1])>0])>median(waterbase_sub_tmp_var[,1][as.numeric(waterbase_sub_tmp_var[,1])>0])){
           print(paste(result$p.value, strahler_ecor_list[x],variable_list[y], "n=", nrow(tmp_poi_sub)))
+          } else {
+            print(paste("-",result$p.value, strahler_ecor_list[x],variable_list[y], "n=", nrow(tmp_poi_sub)))
+          }
         } else {
           print(paste("NS", strahler_ecor_list[x],variable_list[y]))
         }
@@ -370,7 +433,7 @@ for (x in 1: length(strahler_ecor_list) ){
 for (x in 1: length(strahler_ecor_list) ){
  tmp_poi<-strahler_ecor_list[x]
  tmp_poi_data<-get(tmp_poi)
- tmp_poi_data<-tmp_poi_data[tmp_poi_data$Total_Length<=1000,]
+ tmp_poi_data<-tmp_poi_data[tmp_poi_data$Total_Length<=15000,]
  
 for (y in 1: length(variable_list) ){
  tmp_var<-variable_list[y] 
@@ -387,31 +450,53 @@ for (l in 1 : length(ecoregions)){
   
   if (nrow(tmp_poi_sub)>10){
     tmp_poi_sub_tmp_var<-tmp_poi_sub[,tmp_var]
-    tmp_poi_sub_tmp_var<-cbind(tmp_poi_sub_tmp_var,rep("tmp_poi"))
+    tmp_poi_sub_tmp_var<-data.frame(tmp_poi_sub_tmp_var,rep("tmp_poi"))
+    names(tmp_poi_sub_tmp_var)<-c("value","group")
     
     waterbase_sub_tmp_var<-waterbase_sub[,tmp_var]
-    waterbase_sub_tmp_var<-cbind(waterbase_sub_tmp_var,rep("all"))
+    waterbase_sub_tmp_var<-data.frame(waterbase_sub_tmp_var,rep("all"))
+    names(waterbase_sub_tmp_var)<-c("value","group")
     
-    tmp_poi_all_sub_tmp_var<-rbind(as.numeric(tmp_poi_sub_tmp_var),waterbase_sub_tmp_var)
-    tmp_poi_all_sub_tmp_var<-as.data.frame(tmp_poi_all_sub_tmp_var)
-    names(tmp_poi_all_sub_tmp_var)<-c("value","group")
+    tmp_poi_all_sub_tmp_var<-rbind.data.frame(tmp_poi_sub_tmp_var,waterbase_sub_tmp_var)
     
     
-    result<-(wilcox.test(as.numeric(tmp_poi_all_sub_tmp_var$value)~tmp_poi_all_sub_tmp_var$group) )
+
+    
+      if (length(unique(tmp_poi_all_sub_tmp_var$group[tmp_poi_all_sub_tmp_var$value>0]))==2){
+              result<-(wilcox.test(tmp_poi_all_sub_tmp_var$value[tmp_poi_all_sub_tmp_var$value>0]~tmp_poi_all_sub_tmp_var$group[tmp_poi_all_sub_tmp_var$value>0]) )
+      } else {
+        print(paste ("all zero",ecoregions[l]))
+        {next}
+      }
+        
+    png(paste("/tmp/","Ecoregions with Strahler",ecoregions[l],all_ecor_names[x],variable_names[y],".png",sep="_"),width = 1760, height = 960, units = "px",pointsize=40)
+    par(mfrow = c(1, 4), pty = "s")
+    hist(as.numeric(tmp_poi_sub_tmp_var[,1]), main=paste(all_ecor_names[x]),xlab=variable_names[y]) 
+    mtext(paste(ecoregions[l],"Strahler"))
+    boxplot(tmp_poi_sub_tmp_var[,1][(tmp_poi_sub_tmp_var[,1])>0],outline=FALSE)
+    mtext(paste("n=", nrow(tmp_poi_sub)))
+    hist(as.numeric(waterbase_sub_tmp_var[,1]), main=paste("all waterbase stations"),xlab=variable_names[y]) 
+    mtext(paste(ecoregions[l],"Strahler"))
+    boxplot(waterbase_sub_tmp_var[,1][as.numeric(waterbase_sub_tmp_var[,1])>0],outline=FALSE)
+    dev.off()
     
     if (is.na(result$p.value)){ 
       print(paste("NA", strahler_ecor_list[x],variable_list[y],ecoregions[l]))
-      } else {
-        if (result$p.value<0.05){
-#           print((ecoregions[l]))
-#           print(strahler_ecor_list[x])
-#           print(tmp_var<-variable_list[y])
-#           print(result)
-          print(paste(result$p.value, strahler_ecor_list[x],variable_list[y],ecoregions[l], "n=", nrow(tmp_poi_sub)))
+    } else {
+      if (result$p.value<0.1){
+        #           print((ecoregions[l]))
+        #           print(strahler_ecor_list[x])
+        #           print(tmp_var<-variable_list[y])
+        #           print(result)
+        if (median(tmp_poi_sub_tmp_var[,1][(tmp_poi_sub_tmp_var[,1])>0])>median(waterbase_sub_tmp_var[,1][as.numeric(waterbase_sub_tmp_var[,1])>0])&(length(unique(tmp_poi_all_sub_tmp_var$group[tmp_poi_all_sub_tmp_var$value>0]))==2)){
+          print(paste(result$p.value,ecoregions[l], strahler_ecor_list[x],variable_list[y], "n=", nrow(tmp_poi_sub)))
         } else {
-            print(paste("NS", strahler_ecor_list[x],variable_list[y],ecoregions[l]))
-          }
+          print(paste("-",result$p.value, ecoregions[l], strahler_ecor_list[x],variable_list[y], "n=", nrow(tmp_poi_sub)))
+        }
+      } else {
+        print(paste("NS", ecoregions[l],strahler_ecor_list[x],variable_list[y]))
       }
+    }
     }
     
   }
