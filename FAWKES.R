@@ -10,6 +10,7 @@ require (raster)
 require(rgeos)
 library(pryr)
 
+
 ### load all files and prepare data (step 1), 
 ## test
 # OSM data extracted through overpass-turbo and converted into csv
